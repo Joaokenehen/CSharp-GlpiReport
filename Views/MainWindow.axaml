@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:RelatorioGLPIApp.ViewModels"
+        x:Class="RelatorioGLPIApp.Views.MainWindow"
+        x:DataType="vm:LoginViewModel"
+        Title="Login - Relatório GLPI" Width="400" Height="450"
+        WindowStartupLocation="CenterScreen">
+    <Design.DataContext>
+        <vm:LoginViewModel/>
+    </Design.DataContext>
+
+    <StackPanel Margin="30" Spacing="15" VerticalAlignment="Center">
+
+        <TextBlock Text="Conectar ao GLPI" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
+
+        <TextBlock Text="URL da API:" />
+        <TextBox Text="{Binding UrlGlpi}" PlaceholderText="https://suporte.../apirest.php" />
+
+        <TextBlock Text="User-Token:" />
+        <TextBox Text="{Binding UserToken}" PasswordChar="*" />
+
+        <TextBlock Text="App-Token:" />
+        <TextBox Text="{Binding AppToken}" PasswordChar="*" />
+
+        <!-- O botão Entrar chama o comando EntrarCommand que criamos no ViewModel -->
+        <Button Content="Entrar" Command="{Binding EntrarCommand}"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                Background="#0078D7" Foreground="White" Padding="10" Margin="0,10,0,0"/>
+
+        <!-- Aqui mostramos a mensagem de erro ou sucesso -->
+        <TextBlock Text="{Binding Mensagem}" Foreground="Red" HorizontalAlignment="Center"/>
+
+    </StackPanel>
+</Window>

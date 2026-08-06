@@ -1,0 +1,47 @@
+# ==========================================
+# Compilação e Build do .NET / Avalonia
+# ==========================================
+bin/
+obj/
+TestResults/
+*.Publish.xml
+
+# ==========================================
+# Arquivos de IDE (VS Code, Visual Studio, Rider)
+# ==========================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vs/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+
+# ==========================================
+# Arquivos de Sistema Operacional
+# ==========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# ==========================================
+# Logs e Temporários
+# ==========================================
+*.log
+*.cache
+*.tmp
+*.bak
