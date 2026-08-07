@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RelatorioGLPIApp.ViewModels"
+             x:Class="RelatorioGLPIApp.Views.LoginView"
+             x:DataType="vm:LoginViewModel"
+             Background="#F3F4F6">
+
+    <Border Background="White" MaxWidth="450" VerticalAlignment="Center" Padding="30" CornerRadius="10" BoxShadow="0 4 10 0 #20000000">
+        <StackPanel Spacing="20">
+
+            <TextBlock Text="Integração GLPI" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#333333"/>
+            <TextBlock Text="Expresso Nordeste" FontSize="16" HorizontalAlignment="Center" Foreground="#666666" Margin="0,-15,0,10"/>
+
+            <StackPanel Spacing="5">
+                <TextBlock Text="URL da API" FontWeight="SemiBold"/>
+                <TextBox Text="{Binding UrlGlpi}" PlaceholderText="https://suporte.exemplo.com.br/apirest.php" />
+            </StackPanel>
+
+            <StackPanel Spacing="5">
+                <TextBlock Text="User Token" FontWeight="SemiBold"/>
+                <TextBox Text="{Binding UserToken}" PasswordChar="*" PlaceholderText="Cole seu User Token aqui" />
+            </StackPanel>
+
+            <StackPanel Spacing="5">
+                <TextBlock Text="App Token" FontWeight="SemiBold"/>
+                <TextBox Text="{Binding AppToken}" PasswordChar="*" PlaceholderText="Cole seu App Token aqui" />
+            </StackPanel>
+
+            <Button Content="Entrar"
+                    Command="{Binding EntrarCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Background="#0078D4"
+                    Foreground="White"
+                    Padding="10"
+                    FontSize="16"
+                    FontWeight="Bold"
+                    CornerRadius="5"
+                    Cursor="Hand"
+                    Margin="0,10,0,0"/>
+
+            <TextBlock Text="{Binding Mensagem}"
+                       Foreground="#D83B01"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"/>
+
+        </StackPanel>
+    </Border>
+
+</UserControl>

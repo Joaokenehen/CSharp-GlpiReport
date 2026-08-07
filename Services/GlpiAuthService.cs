@@ -10,6 +10,8 @@ public class GLPIAuthService : IGlpiAuthService
 
     private readonly ILogService _log;
 
+    public string? SessionToken { get; private set; }
+
     public GLPIAuthService(ILogService logService)
     {
         _log = logService;
@@ -36,7 +38,7 @@ public class GLPIAuthService : IGlpiAuthService
                 // Extraindo o token de sessão do JSON
                 string jsonResponse = await response.Content.ReadAsStringAsync();
                 using JsonDocument doc = JsonDocument.Parse(jsonResponse);
-                string sessionToken = doc.RootElement.GetProperty("session_token").GetString() ?? "";
+                SessionToken = doc.RootElement.GetProperty("session_token").GetString();
 
                 _log.Sucesso("Auth", "SUCESSO! Sessão iniciada no GLPI.");
                 return true;

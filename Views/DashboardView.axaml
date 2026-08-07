@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RelatorioGLPIApp.ViewModels"
+             xmlns:models="using:RelatorioGLPIApp.Models"
+             x:Class="RelatorioGLPIApp.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel"
+             x:Name="RootControl"
+             Background="#F3F4F6">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- 1. CABEÇALHO (Fica fixo no topo) -->
+        <Border Grid.Row="0" Background="White" Padding="20" BoxShadow="0 2 5 0 #20000000">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="Montador de Relatórios" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+
+                <Button Grid.Column="1"
+                        Content="+ Adicionar Atividade Manual"
+                        Command="{Binding AdicionarItemManualCommand}"
+                        Background="#0078D4" Foreground="White"
+                        Padding="15,10" CornerRadius="5" FontWeight="Bold"
+                        Cursor="Hand"/>
+            </Grid>
+        </Border>
+
+        <!-- 2. ÁREA DE ROLAGEM COM OS CARDS -->
+        <ScrollViewer Grid.Row="1" Padding="20">
+
+            <!-- Esse controle repete o desenho abaixo para cada relatório na nossa lista -->
+            <ItemsControl ItemsSource="{Binding Relatorios}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RelatorioItem">
+
+                        <!-- O DESENHO DO CARD -->
+                        <Border Background="White" CornerRadius="8" Padding="15" Margin="0,0,0,15" BoxShadow="0 2 4 0 #10000000">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
+
+                                <!-- Linha 1: Categoria e Botão Excluir -->
+                                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
+                                    <TextBlock Text="Categoria:" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                    <TextBox Text="{Binding Categoria}" Width="200" PlaceholderText="Ex: Suporte Matriz"/>
+                                </StackPanel>
+
+                                <Button Grid.Row="0" Grid.Column="1"
+                                        Content="Excluir"
+                                        Command="{Binding #RootControl.((vm:DashboardViewModel)DataContext).RemoverItemCommand}"
+                                        CommandParameter="{Binding}"
+                                        Background="#FF4C4C" Foreground="White" Padding="10,5" CornerRadius="5"
+                                        Cursor="Hand"/>
+
+                                <!-- Linha 2: Título (Ex: ~Chamado 10301...) -->
+                                <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                         Text="{Binding Titulo}"
+                                         FontWeight="Bold" FontSize="16"
+                                         Margin="0,0,0,10" PlaceholderText="Título do Chamado/Atividade"/>
+
+                                <!-- Linha 3: Descrição do que foi feito -->
+                                <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                                         Text="{Binding Descricao}"
+                                         AcceptsReturn="True" TextWrapping="Wrap"
+                                         MinHeight="80" PlaceholderText="Descreva o que foi feito..."/>
+                            </Grid>
+                        </Border>
+
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </ScrollViewer>
+    </Grid>
+</UserControl>

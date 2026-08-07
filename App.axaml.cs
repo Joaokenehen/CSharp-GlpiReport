@@ -19,8 +19,7 @@ public partial class App : Application
         {
             desktop.MainWindow = new MainWindow
             {
-                // Mude de MainViewModel() para LoginViewModel() aqui:
-                DataContext = new LoginViewModel(),
+                DataContext = new MainWindowViewModel(),
             };
         }
 
