@@ -25,4 +25,6 @@ public class Chamado
     [JsonPropertyName("users_id_recipient")]
     public string? NomeUsuario { get; set; }
 
+    [JsonPropertyName("users_id_assign")]
+    public string? TecnicoAtribuido { get; set; }
 }

@@ -7,6 +7,7 @@ public partial class RelatorioItem : ObservableObject
     [ObservableProperty]
     private string _categoria = "Suporte Matriz";
 
+
     [ObservableProperty]
     private string _titulo = string.Empty;
 
@@ -15,5 +16,11 @@ public partial class RelatorioItem : ObservableObject
 
     [ObservableProperty]
     private bool _isOrigemGlpi;
+
+    [ObservableProperty]
+    private string _statusTag = string.Empty;
+
+    [ObservableProperty]
+    private string _corStatus = string.Empty;
 }
 

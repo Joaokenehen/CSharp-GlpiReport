@@ -5,76 +5,96 @@
              x:Class="RelatorioGLPIApp.Views.DashboardView"
              x:DataType="vm:DashboardViewModel"
              x:Name="RootControl"
-             Background="#F3F4F6">
+             Background="#F8F9FA">
 
     <Grid RowDefinitions="Auto,*">
-        <!-- 1. CABEÇALHO (Fica fixo no topo) -->
-        <Border Grid.Row="0" Background="White" Padding="20" BoxShadow="0 2 5 0 #20000000">
-            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0">
 
-                <!-- Esquerda: Seletor de Data e Botão de Filtro -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                    <TextBlock Text="Data:" VerticalAlignment="Center" FontWeight="Bold"/>
-                    <DatePicker SelectedDate="{Binding DataSelecionada}"/>
-                    <Button Content="Filtrar"
+        <!-- 1. CABEÇALHO MODERNO -->
+        <Border Grid.Row="0" Background="White" Padding="20,15" BoxShadow="0 4 15 0 #0D000000" ZIndex="1">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
+                    <TextBlock Text="Gerador de Relatórios" VerticalAlignment="Center" FontWeight="Bold" FontSize="20" Foreground="#2B3035"/>
+                    <Border Background="#E9ECEF" Width="1" Margin="5,0"/>
+
+                    <TextBlock Text="Data:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D"/>
+                    <DatePicker SelectedDate="{Binding DataSelecionada}" Height="35" CornerRadius="6"/>
+
+                    <!-- NOVO CAMPO: Filtro de Técnico -->
+                    <TextBlock Text="Seu Usuário:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D" Margin="5,0,0,0"/>
+                    <TextBox Text="{Binding UsuarioTi}" PlaceholderText="Ex: joao.gustavo" Width="140" Height="35" CornerRadius="6" Padding="10,6"/>
+
+                    <Button Content="Buscar Chamados"
                             Command="{Binding FiltrarPorDataCommand}"
-                            Background="#E1DFDD" Padding="12,8" CornerRadius="5"
-                            Cursor="Hand"/>
+                            Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1"
+                            Foreground="#495057" Padding="15,7" CornerRadius="6" Cursor="Hand"/>
                 </StackPanel>
 
-                <!-- Direita: Botão de Adicionar Atividade Manual -->
-                <Button Grid.Column="2"
-                        Content="+ Adicionar Manual"
-                        Command="{Binding AdicionarItemManualCommand}"
-                        Background="#0078D4" Foreground="White"
-                        Padding="15,9" CornerRadius="5" FontWeight="Bold"
-                        Cursor="Hand"/>
+                <!-- SELETOR DE ATIVIDADE MANUAL -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <ComboBox ItemsSource="{Binding CategoriasDisponiveis}"
+                              SelectedItem="{Binding CategoriaSelecionadaNova}"
+                              Width="180" Height="38" CornerRadius="6"/>
+
+                    <Button Content="+ Adicionar"
+                            Command="{Binding AdicionarItemManualCommand}"
+                            Background="#0D6EFD" Foreground="White"
+                            Padding="15,8" CornerRadius="6" FontWeight="SemiBold"
+                            Cursor="Hand"/>
+                </StackPanel>
             </Grid>
         </Border>
 
-        <!-- 2. ÁREA DE ROLAGEM COM OS CARDS -->
-        <ScrollViewer Grid.Row="1" Padding="20">
-
-            <!-- Esse controle repete o desenho abaixo para cada relatório na nossa lista -->
+        <!-- 2. ÁREA DOS CARDS -->
+        <ScrollViewer Grid.Row="1" Padding="30">
             <ItemsControl ItemsSource="{Binding Relatorios}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RelatorioItem">
 
-                        <!-- O DESENHO DO CARD -->
-                        <Border Background="White" CornerRadius="8" Padding="15" Margin="0,0,0,15" BoxShadow="0 2 4 0 #10000000">
+                        <Border Background="White" CornerRadius="12" Padding="20" Margin="0,0,0,20"
+                                BoxShadow="0 2 8 0 #0A000000" BorderBrush="#E9ECEF" BorderThickness="1">
+
                             <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
 
-                                <!-- Linha 1: Categoria e Botão Excluir -->
-                                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
-                                    <TextBlock Text="Categoria:" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                    <TextBox Text="{Binding Categoria}" Width="200" PlaceholderText="Ex: Suporte Matriz"/>
+                                <!-- ÁREA DAS TAGS (Categoria e Status) -->
+                                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
+                                    <Border Background="#E9ECEF" CornerRadius="4" Padding="8,4">
+                                        <TextBlock Text="{Binding Categoria}" FontSize="12" FontWeight="Bold" Foreground="#495057"/>
+                                    </Border>
+
+                                    <!-- A NOVA TAG DE STATUS COM COR DINÂMICA -->
+                                    <Border Background="{Binding CorStatus}" CornerRadius="4" Padding="8,4">
+                                        <TextBlock Text="{Binding StatusTag}" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                                    </Border>
                                 </StackPanel>
 
+                                <!-- Botão Lixeira -->
                                 <Button Grid.Row="0" Grid.Column="1"
-                                        Content="Excluir"
+                                        Content="✕ Remover"
                                         Command="{Binding #RootControl.((vm:DashboardViewModel)DataContext).RemoverItemCommand}"
                                         CommandParameter="{Binding}"
-                                        Background="#FF4C4C" Foreground="White" Padding="10,5" CornerRadius="5"
-                                        Cursor="Hand"/>
+                                        Background="Transparent" Foreground="#DC3545" FontWeight="SemiBold"
+                                        Padding="5" Cursor="Hand" Margin="0,-5,-5,0"/>
 
-                                <!-- Linha 2: Título (Ex: ~Chamado 10301...) -->
+                                <!-- Título do Card -->
                                 <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                          Text="{Binding Titulo}"
-                                         FontWeight="Bold" FontSize="16"
-                                         Margin="0,0,0,10" PlaceholderText="Título do Chamado/Atividade"/>
+                                         FontWeight="Bold" FontSize="16" Foreground="#212529"
+                                         Margin="0,0,0,10" Background="Transparent" BorderThickness="0,0,0,1"
+                                         CornerRadius="0" Padding="0,0,0,5"/>
 
-                                <!-- Linha 3: Descrição do que foi feito -->
+                                <!-- Descrição do Card -->
                                 <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
                                          Text="{Binding Descricao}"
                                          AcceptsReturn="True" TextWrapping="Wrap"
-                                         MinHeight="80" PlaceholderText="Descreva o que foi feito..."/>
+                                         MinHeight="60" Background="#F8F9FA" BorderBrush="#DEE2E6"
+                                         CornerRadius="6" Padding="10"/>
                             </Grid>
                         </Border>
 
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-
         </ScrollViewer>
     </Grid>
 </UserControl>
