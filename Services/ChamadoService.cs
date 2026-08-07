@@ -26,7 +26,7 @@ public class ChamadoService : IChamadoService
             client.DefaultRequestHeaders.Add("App-Token", appToken);
             client.DefaultRequestHeaders.Add("Session-Token", sessionToken);
 
-            string endpoint = urlBase.TrimEnd('/') + "/Ticket?range=0-50";
+            string endpoint = urlBase.TrimEnd('/') + "/Ticket?expand_dropdowns=true&sort=id&order=DESC&range=0-100";
 
             HttpResponseMessage response = await client.GetAsync(endpoint);
 
@@ -34,7 +34,6 @@ public class ChamadoService : IChamadoService
             {
                 string jsonResponse = await response.Content.ReadAsStringAsync();
 
-                // Mágica: Converte o texto da internet direto para a nossa lista do C#
                 var chamados = JsonSerializer.Deserialize<List<Chamado>>(jsonResponse) ?? new List<Chamado>();
 
                 _log.Sucesso("Chamados", $"{chamados.Count} chamados carregados com sucesso!");
@@ -44,7 +43,7 @@ public class ChamadoService : IChamadoService
             {
                 string erroDetalhado = await response.Content.ReadAsStringAsync();
                 _log.Erro("Chamados", $"Erro ao buscar: {(int)response.StatusCode} - {erroDetalhado}");
-                return new List<Chamado>(); // Retorna lista vazia em caso de erro
+                return new List<Chamado>();
             }
         }
         catch (Exception ex)

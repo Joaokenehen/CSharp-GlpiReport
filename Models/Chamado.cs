@@ -18,4 +18,11 @@ public class Chamado
 
     [JsonPropertyName("content")]
     public string Descricao { get; set; } = string.Empty;
+
+    [JsonPropertyName("entities_id")]
+    public string? Entidade { get; set; }
+
+    [JsonPropertyName("users_id_recipient")]
+    public string? NomeUsuario { get; set; }
+
 }

@@ -10,14 +10,24 @@
     <Grid RowDefinitions="Auto,*">
         <!-- 1. CABEÇALHO (Fica fixo no topo) -->
         <Border Grid.Row="0" Background="White" Padding="20" BoxShadow="0 2 5 0 #20000000">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock Text="Montador de Relatórios" FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0">
 
-                <Button Grid.Column="1"
-                        Content="+ Adicionar Atividade Manual"
+                <!-- Esquerda: Seletor de Data e Botão de Filtro -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <TextBlock Text="Data:" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <DatePicker SelectedDate="{Binding DataSelecionada}"/>
+                    <Button Content="Filtrar"
+                            Command="{Binding FiltrarPorDataCommand}"
+                            Background="#E1DFDD" Padding="12,8" CornerRadius="5"
+                            Cursor="Hand"/>
+                </StackPanel>
+
+                <!-- Direita: Botão de Adicionar Atividade Manual -->
+                <Button Grid.Column="2"
+                        Content="+ Adicionar Manual"
                         Command="{Binding AdicionarItemManualCommand}"
                         Background="#0078D4" Foreground="White"
-                        Padding="15,10" CornerRadius="5" FontWeight="Bold"
+                        Padding="15,9" CornerRadius="5" FontWeight="Bold"
                         Cursor="Hand"/>
             </Grid>
         </Border>
