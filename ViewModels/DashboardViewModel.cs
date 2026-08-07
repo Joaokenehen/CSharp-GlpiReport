@@ -58,8 +58,6 @@ public partial class DashboardViewModel : ViewModelBase
 
         foreach (var chamado in _todosOsChamados)
         {
-            // 1. FILTRO DE DATA (NOVA LÓGICA)
-            // O chamado é relevante se foi CRIADO, SOLUCIONADO ou FECHADO na data selecionada.
             bool criadoHoje = chamado.DataCriacao.StartsWith(dataAlvo);
             bool solucionadoHoje = chamado.DataSolucao?.StartsWith(dataAlvo) ?? false;
             bool fechadoHoje = chamado.DataFechamento?.StartsWith(dataAlvo) ?? false;
@@ -114,10 +112,25 @@ public partial class DashboardViewModel : ViewModelBase
 
             string nomeTecnico = string.IsNullOrWhiteSpace(chamado.TecnicoAtribuido) ? "Não atribuído" : chamado.TecnicoAtribuido;
 
+            if (nomeTecnico.Contains('.'))
+            {
+                nomeTecnico = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(nomeTecnico.Replace('.', ' '));
+            }
+
+            string titulo;
+            if (categoriaAutomatica == "Suporte Filiais")
+            {
+                titulo = $"~Chamado: {chamado.Id} – {setor}~";
+            }
+            else
+            {
+                titulo = $"~Chamado: {chamado.Id} – {setor} - {usuario}~";
+            }
+
             Relatorios.Add(new RelatorioItem
             {
                 Categoria = categoriaAutomatica,
-                Titulo = $"~Chamado: {chamado.Id} – {setor} - {usuario}~",
+                Titulo = titulo,
                 Descricao = descricaoLimpa,
                 IsOrigemGlpi = true,
                 StatusTag = tagTexto,
