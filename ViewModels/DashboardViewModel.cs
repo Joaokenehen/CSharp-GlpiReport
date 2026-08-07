@@ -58,14 +58,20 @@ public partial class DashboardViewModel : ViewModelBase
 
         foreach (var chamado in _todosOsChamados)
         {
-            // 1. FILTRO DE DATA
-            if (!chamado.DataCriacao.StartsWith(dataAlvo)) continue;
+            // 1. FILTRO DE DATA (NOVA LÓGICA)
+            // O chamado é relevante se foi CRIADO, SOLUCIONADO ou FECHADO na data selecionada.
+            bool criadoHoje = chamado.DataCriacao.StartsWith(dataAlvo);
+            bool solucionadoHoje = chamado.DataSolucao?.StartsWith(dataAlvo) ?? false;
+            bool fechadoHoje = chamado.DataFechamento?.StartsWith(dataAlvo) ?? false;
+
+            if (!criadoHoje && !solucionadoHoje && !fechadoHoje) continue;
 
             // Se passou da data, vamos "espiar" o que o GLPI mandou:
-            _log.Info("Debug", $"Chamado {chamado.Id} é de hoje. Status: {chamado.Status} | Técnico no GLPI: '{chamado.TecnicoAtribuido}'");
+            _log.Info("Debug", $"Chamado {chamado.Id} é relevante para hoje. Status: {chamado.Status} | Técnico no GLPI: '{chamado.TecnicoAtribuido}'");
 
             // 2. FILTRO DE STATUS
-            if (chamado.Status < 2 || chamado.Status > 6)
+            // Permite todos os status de 1 (Novo) a 6 (Fechado)
+            if (chamado.Status < 1 || chamado.Status > 6)
             {
                 _log.Info("Debug", $"-> Chamado {chamado.Id} ignorado pois o Status é {chamado.Status}");
                 continue;
@@ -106,6 +112,8 @@ public partial class DashboardViewModel : ViewModelBase
             else if (chamado.Status == 6) { tagTexto = "Fechado"; corFundo = "#212529"; }
             else if (chamado.Status == 4) { tagTexto = "Pendente"; corFundo = "#FD7E14"; }
 
+            string nomeTecnico = string.IsNullOrWhiteSpace(chamado.TecnicoAtribuido) ? "Não atribuído" : chamado.TecnicoAtribuido;
+
             Relatorios.Add(new RelatorioItem
             {
                 Categoria = categoriaAutomatica,
@@ -113,7 +121,8 @@ public partial class DashboardViewModel : ViewModelBase
                 Descricao = descricaoLimpa,
                 IsOrigemGlpi = true,
                 StatusTag = tagTexto,
-                CorStatus = corFundo
+                CorStatus = corFundo,
+                Tecnico = $"Téc: {nomeTecnico}"
             });
 
             chamadosEncontrados++;

@@ -22,5 +22,8 @@ public partial class RelatorioItem : ObservableObject
 
     [ObservableProperty]
     private string _corStatus = string.Empty;
+
+    [ObservableProperty]
+    private string _tecnico = string.Empty;
 }
 
