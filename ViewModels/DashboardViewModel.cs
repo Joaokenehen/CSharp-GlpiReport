@@ -64,6 +64,8 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isNotificationVisible;
 
+    public Action? OnLogoutRequested { get; set; }
+
     public DashboardViewModel(GlpiConnectionInfo connectionInfo)
     {
         _log = new LogService();
@@ -267,6 +269,12 @@ public partial class DashboardViewModel : ViewModelBase
         var listaOrdenada = Relatorios.OrderBy(x => ordem.TryGetValue(x.Categoria ?? "", out int peso) ? peso : 99).ToList();
         Relatorios.Clear();
         foreach (var item in listaOrdenada) Relatorios.Add(item);
+    }
+
+    [RelayCommand]
+    private void Sair()
+    {
+        OnLogoutRequested?.Invoke();
     }
 
     [RelayCommand]

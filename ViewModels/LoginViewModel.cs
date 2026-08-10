@@ -26,6 +26,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private string _mensagem = "";
 
+    [ObservableProperty]
+    private bool _isLoading;
+
     public LoginViewModel()
     {
         ILogService logger = new LogService();
@@ -37,6 +40,7 @@ public partial class LoginViewModel : ViewModelBase
     [RelayCommand]
     private async Task Entrar()
     {
+        IsLoading = true;
         Mensagem = "Conectando ao servidor...";
 
         bool sucesso = await _authService.AutenticarAsync(UrlGlpi, UserToken, AppToken);
@@ -55,5 +59,6 @@ public partial class LoginViewModel : ViewModelBase
         {
             Mensagem = "Erro: Verifique seus tokens ou a URL.";
         }
+        IsLoading = false;
     }
 }

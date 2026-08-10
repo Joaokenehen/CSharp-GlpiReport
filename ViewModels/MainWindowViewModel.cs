@@ -11,13 +11,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel()
     {
-        var telaDeLogin = new LoginViewModel();
+        ShowLoginView();
+    }
 
-        telaDeLogin.AoLogarComSucesso = (connectionInfo) =>
+    private void ShowLoginView()
+    {
+        var loginViewModel = new LoginViewModel();
+        loginViewModel.AoLogarComSucesso = (connectionInfo) =>
         {
-            PaginaAtual = new DashboardViewModel(connectionInfo);
+            PaginaAtual = new DashboardViewModel(connectionInfo)
+            {
+                OnLogoutRequested = ShowLoginView // Agora, ao sair, chamamos este método novamente
+            };
         };
-
-        PaginaAtual = telaDeLogin;
+        PaginaAtual = loginViewModel;
     }
 }
