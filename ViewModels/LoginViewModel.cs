@@ -15,7 +15,7 @@ public partial class LoginViewModel : ViewModelBase
     private readonly IChamadoService _chamadoService;
 
     [ObservableProperty]
-    private string _urlGlpi = "https://suporte.expnordeste.com.br/apirest.php";
+    private string _urlGlpi = "https://suporte.expnordeste.com.br/apirest.php"; // Colocar URl do seu GLPI
 
     [ObservableProperty]
     private string _userToken = "";
@@ -43,7 +43,7 @@ public partial class LoginViewModel : ViewModelBase
 
         if (sucesso)
         {
-            Mensagem = "Autenticado com sucesso! SESSÃO INICIADA.";
+            Mensagem = "Autenticado com sucesso! Iniciando sessão.";
             string sessionToken = _authService.SessionToken ?? "";
             var listaDeChamados = await _chamadoService.ObterChamadosAsync(UrlGlpi, AppToken, sessionToken);
             Mensagem = $"Pronto! {listaDeChamados.Count} chamados carregados na memória.";

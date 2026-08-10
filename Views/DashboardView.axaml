@@ -86,16 +86,16 @@
                                     Background="#0D6EFD" Foreground="White"
                                     Padding="15,8" CornerRadius="6" FontWeight="SemiBold"
                                     Cursor="Hand"/>
-                            <!-- NOVO BOTÃO DE EXPORTAR COM MENU -->
-                            <SplitButton Content="Exportar" Background="#0DCAF0" Foreground="Black" Padding="12,8" CornerRadius="6" FontWeight="SemiBold" Cursor="Hand">
-                                <SplitButton.Flyout>
+                            <!-- BOTÃO DE EXPORTAR COM MENU SUSPENSO -->
+                            <Button Content="Exportar" Background="#0DCAF0" Foreground="Black" Padding="12,8" CornerRadius="6" FontWeight="SemiBold" Cursor="Hand">
+                                <Button.Flyout>
                                     <MenuFlyout>
                                         <MenuItem Header="Copiar para Área de Transferência" Command="{Binding CopiarRelatorioCommand}"/>
-                                        <MenuItem Header="Gerar PDF (em breve)" Command="{Binding ExportarPdfCommand}"/>
-                                        <MenuItem Header="Gerar Word (em breve)" Command="{Binding ExportarWordCommand}"/>
+                                        <MenuItem Header="Gerar PDF" Command="{Binding ExportarPdfCommand}"/>
+                                        <MenuItem Header="Gerar Word" Command="{Binding ExportarWordCommand}"/>
                                     </MenuFlyout>
-                                </SplitButton.Flyout>
-                            </SplitButton>
+                                </Button.Flyout>
+                            </Button>
                         </StackPanel>
                     </WrapPanel>
                 </Border>
@@ -155,5 +155,19 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- OVERLAY DE NOTIFICAÇÃO -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding IsNotificationVisible}"
+                Background="#333"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,0,0,30"
+                Padding="20,10"
+                CornerRadius="8"
+                BoxShadow="0 4 8 0 #40000000"
+                ZIndex="999">
+            <TextBlock Text="{Binding NotificationMessage}" Foreground="White" FontWeight="SemiBold"/>
+        </Border>
     </Grid>
 </UserControl>

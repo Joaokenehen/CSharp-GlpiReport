@@ -16,9 +16,12 @@ using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 using Xceed.Words.NET;
 using System.IO;
+using Xceed.Document.NET;
+using Avalonia.Input.Platform; // Esta é a linha que faltava!
 using RelatorioGLPIApp.Models;
 using RelatorioGLPIApp.Documents;
 using RelatorioGLPIApp.Services;
+
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -54,6 +57,12 @@ public partial class DashboardViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _categoriaSelecionadaNova = "Outras Atividades";
+
+    [ObservableProperty]
+    private string _notificationMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isNotificationVisible;
 
     public DashboardViewModel(GlpiConnectionInfo connectionInfo)
     {
@@ -261,7 +270,7 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void CopiarRelatorio()
+    private async Task CopiarRelatorio()
     {
         string relatorioFinal = GerarTextoDoRelatorio();
 
@@ -271,13 +280,14 @@ public partial class DashboardViewModel : ViewModelBase
 
         if (topLevel?.Clipboard is { } clipboard)
         {
-            // Usando SetText síncrono como fallback para versões mais antigas do Avalonia
-            clipboard.SetText(relatorioFinal);
-            _log.Sucesso("Relatório", "Relatório formatado copiado para a área de transferência!");
+            await clipboard.SetTextAsync(relatorioFinal); // Agora SetTextAsync deve funcionar!
+            _log.Sucesso("Relatório", "Relatório formatado copiado para a área de transferência!"); // Log interno
+            await ShowNotificationAsync("Copiado para a área de transferência!"); // Notificação para o usuário
         }
         else
         {
             _log.Erro("Relatório", "Não foi possível acessar a área de transferência.");
+            await ShowNotificationAsync("Erro ao copiar para a área de transferência!");
         }
     }
 
@@ -293,22 +303,25 @@ public partial class DashboardViewModel : ViewModelBase
 
         var suggestedFileName = $"Relatorio_{UsuarioTi.Replace('.', '_')}_{DataSelecionada:yyyy_MM_dd}.pdf";
 
-        var file = await topLevel.Storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Salvar Relatório em PDF",
             SuggestedFileName = suggestedFileName,
-            DefaultFileExtension = "pdf",
             FileTypeChoices = new[] { new FilePickerFileType("Arquivos PDF") { Patterns = new[] { "*.pdf" } } }
         });
 
-        if (file != null && file.Path.LocalPath != null)
+        if (file is not null)
         {
             try
             {
-                var model = new RelatorioPdfModel(UsuarioTi, DataSelecionada, Relatorios.ToList());
-                var document = new RelatorioPdfDocument(model);
-                document.GeneratePdf(file.Path.LocalPath);
-                _log.Sucesso("Exportar", $"Relatório salvo com sucesso em: {file.Path.LocalPath}");
+                // Usar um stream para escrever o arquivo é mais robusto
+                await using (var stream = await file.OpenWriteAsync())
+                {
+                    var model = new RelatorioPdfModel(UsuarioTi, DataSelecionada, Relatorios.ToList());
+                    var document = new RelatorioPdfDocument(model);
+                    document.GeneratePdf(stream);
+                }
+                _log.Sucesso("Exportar", $"Relatório salvo com sucesso em: {file.Name}");
             }
             catch (Exception ex)
             {
@@ -329,24 +342,27 @@ public partial class DashboardViewModel : ViewModelBase
 
         var suggestedFileName = $"Relatorio_{UsuarioTi.Replace('.', '_')}_{DataSelecionada:yyyy_MM_dd}.docx";
 
-        var file = await topLevel.Storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = "Salvar Relatório em Word",
             SuggestedFileName = suggestedFileName,
-            DefaultFileExtension = "docx",
             FileTypeChoices = new[] { new FilePickerFileType("Documentos do Word") { Patterns = new[] { "*.docx" } } }
         });
 
-        if (file != null && file.Path.LocalPath != null)
+        if (file is not null)
         {
             try
             {
-                using (var document = DocX.Create(file.Path.LocalPath))
+                // Usar um stream para escrever o arquivo é mais robusto
+                await using (var stream = await file.OpenWriteAsync())
                 {
-                    GerarConteudoWord(document);
-                    document.Save();
+                    using (var document = DocX.Create(stream))
+                    {
+                        GerarConteudoWord(document);
+                        document.Save(); // Salva no stream com o qual foi criado
+                    }
                 }
-                _log.Sucesso("Exportar", $"Relatório salvo com sucesso em: {file.Path.LocalPath}");
+                _log.Sucesso("Exportar", $"Relatório salvo com sucesso em: {file.Name}");
             }
             catch (Exception ex)
             {
@@ -466,5 +482,13 @@ public partial class DashboardViewModel : ViewModelBase
                 document.InsertParagraph("");
             }
         }
+    }
+
+    private async Task ShowNotificationAsync(string message, int durationMs = 3000)
+    {
+        NotificationMessage = message;
+        IsNotificationVisible = true;
+        await Task.Delay(durationMs);
+        IsNotificationVisible = false;
     }
 }

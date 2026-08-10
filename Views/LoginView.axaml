@@ -9,7 +9,7 @@
         <StackPanel Spacing="20">
 
             <TextBlock Text="Integração GLPI" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#333333"/>
-            <TextBlock Text="Expresso Nordeste" FontSize="16" HorizontalAlignment="Center" Foreground="#666666" Margin="0,-15,0,10"/>
+            <TextBlock Text="Gerador de Relatórios" FontSize="16" HorizontalAlignment="Center" Foreground="#666666" Margin="0,-15,0,10"/>
 
             <StackPanel Spacing="5">
                 <TextBlock Text="URL da API" FontWeight="SemiBold"/>
