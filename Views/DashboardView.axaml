@@ -42,7 +42,7 @@
             <Grid RowDefinitions="Auto,Auto">
 
                 <!-- LINHA 1: Título da Janela e Controles -->
-                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" MinHeight="40" Name="TitleBar" PointerPressed="TitleBar_PointerPressed">
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" MinHeight="40" Name="TitleBar" PointerPressed="TitleBar_PointerPressed" Background="Transparent">
                     <TextBlock Grid.Column="0" Text="Gerador de Relatórios" VerticalAlignment="Center" FontWeight="Bold" FontSize="16" Margin="20,0,0,0" Foreground="#2B3035"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="0,0,10,0">
                         <Button Name="MinimizeButton" Content="—" Classes="WindowButton" Click="MinimizeWindow"/>
@@ -68,7 +68,7 @@
 
                         <!-- Search Button -->
                         <Button Content="Buscar Chamados"
-                                Command="{Binding FiltrarPorDataCommand}"
+                                Command="{Binding BuscarChamadosCommand}"
                                 Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1"
                                 Foreground="#495057" Padding="15,7" CornerRadius="6" Cursor="Hand"
                                 VerticalAlignment="Center" Margin="0,0,20,5"/>

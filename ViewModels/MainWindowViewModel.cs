@@ -6,7 +6,6 @@ namespace RelatorioGLPIApp.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    // A variável que diz ao Avalonia qual tela desenhar agora
     [ObservableProperty]
     private ViewModelBase _paginaAtual;
 
@@ -14,9 +13,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var telaDeLogin = new LoginViewModel();
 
-        telaDeLogin.AoLogarComSucesso = (chamadosBaixados) =>
+        telaDeLogin.AoLogarComSucesso = (connectionInfo) =>
         {
-            PaginaAtual = new DashboardViewModel(chamadosBaixados);
+            PaginaAtual = new DashboardViewModel(connectionInfo);
         };
 
         PaginaAtual = telaDeLogin;

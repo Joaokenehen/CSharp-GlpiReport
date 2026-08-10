@@ -10,7 +10,7 @@ namespace RelatorioGLPIApp.ViewModels;
 
 public partial class LoginViewModel : ViewModelBase
 {
-    public Action<List<Chamado>>? AoLogarComSucesso { get; set; }
+    public Action<GlpiConnectionInfo>? AoLogarComSucesso { get; set; }
     private readonly IGlpiAuthService _authService;
     private readonly IChamadoService _chamadoService;
 
@@ -48,7 +48,8 @@ public partial class LoginViewModel : ViewModelBase
             var listaDeChamados = await _chamadoService.ObterChamadosAsync(UrlGlpi, AppToken, sessionToken);
             Mensagem = $"Pronto! {listaDeChamados.Count} chamados carregados na memória.";
 
-            AoLogarComSucesso?.Invoke(listaDeChamados);
+            var connectionInfo = new GlpiConnectionInfo(UrlGlpi, AppToken, sessionToken, _chamadoService, listaDeChamados);
+            AoLogarComSucesso?.Invoke(connectionInfo);
         }
         else
         {

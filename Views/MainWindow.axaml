@@ -5,12 +5,11 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="Gerador de Relatórios GLPI"
-        WindowDecorations="None"
+        SystemDecorations="None"
         CanResize="True"
         Width="1280" Height="768"
         MinWidth="1100" MinHeight="700"
         WindowStartupLocation="CenterScreen">
 
     <ContentControl Content="{Binding PaginaAtual}" />
-
 </Window>

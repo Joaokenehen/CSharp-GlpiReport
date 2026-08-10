@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Net;
 using System.Text.RegularExpressions;
 using RelatorioGLPIApp.Models;
@@ -13,8 +14,14 @@ namespace RelatorioGLPIApp.ViewModels;
 
 public partial class DashboardViewModel : ViewModelBase
 {
-    private readonly List<Chamado> _todosOsChamados;
+    // Armazena os dados da conexão para poder atualizar
+    private readonly string _url;
+    private readonly string _appToken;
+    private readonly string _sessionToken;
+    private readonly IChamadoService _chamadoService;
+
     private readonly ILogService _log;
+    private List<Chamado> _todosOsChamados;
 
     [ObservableProperty]
     private ObservableCollection<RelatorioItem> _relatorios;
@@ -38,17 +45,22 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private string _categoriaSelecionadaNova = "Outras Atividades";
 
-    public DashboardViewModel(List<Chamado> chamadosDoGlpi)
+    public DashboardViewModel(GlpiConnectionInfo connectionInfo)
     {
         _log = new LogService();
-        _todosOsChamados = chamadosDoGlpi;
+
+        _url = connectionInfo.Url;
+        _appToken = connectionInfo.AppToken;
+        _sessionToken = connectionInfo.SessionToken;
+        _chamadoService = connectionInfo.ChamadoService;
+        _todosOsChamados = connectionInfo.InitialChamados;
+
         Relatorios = new ObservableCollection<RelatorioItem>();
 
-        FiltrarPorData();
+        AplicarFiltrosNaLista();
     }
 
-    [RelayCommand]
-    private void FiltrarPorData()
+    private void AplicarFiltrosNaLista()
     {
         Relatorios.Clear();
         string dataAlvo = DataSelecionada.ToString("yyyy-MM-dd");
@@ -110,11 +122,18 @@ public partial class DashboardViewModel : ViewModelBase
             else if (chamado.Status == 6) { tagTexto = "Fechado"; corFundo = "#212529"; }
             else if (chamado.Status == 4) { tagTexto = "Pendente"; corFundo = "#FD7E14"; }
 
-            string nomeTecnico = string.IsNullOrWhiteSpace(chamado.TecnicoAtribuido) ? "Não atribuído" : chamado.TecnicoAtribuido;
-
-            if (nomeTecnico.Contains('.'))
+            string nomeTecnico;
+            if (string.IsNullOrWhiteSpace(chamado.TecnicoAtribuido))
             {
-                nomeTecnico = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(nomeTecnico.Replace('.', ' '));
+                nomeTecnico = "Não atribuído";
+            }
+            else
+            {
+                // Formata cada nome de técnico individualmente
+                var nomes = chamado.TecnicoAtribuido.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                                                    .Select(n => n.Trim())
+                                                    .Select(n => System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(n.Replace('.', ' ')));
+                nomeTecnico = string.Join(", ", nomes);
             }
 
             string titulo;
@@ -147,6 +166,16 @@ public partial class DashboardViewModel : ViewModelBase
             _log.Sucesso("Filtro", $"{chamadosEncontrados} chamados aprovados nos filtros.");
         else
             _log.Info("Filtro", "Nenhum chamado passou.");
+    }
+
+    [RelayCommand] // Este comando agora busca os dados mais recentes e aplica os filtros.
+    private async Task BuscarChamados()
+    {
+        _log.Info("Busca", "Iniciando busca e atualização de chamados no GLPI...");
+        _todosOsChamados = await _chamadoService.ObterChamadosAsync(_url, _appToken, _sessionToken);
+        _log.Sucesso("Busca", $"{_todosOsChamados.Count} chamados sincronizados com o GLPI.");
+
+        AplicarFiltrosNaLista();
     }
 
     [RelayCommand]

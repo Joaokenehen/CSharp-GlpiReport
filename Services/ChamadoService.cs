@@ -63,14 +63,23 @@ public class ChamadoService : IChamadoService
 
                 foreach (var chamado in chamados)
                 {
-                    // Procura pelo ator do tipo "atribuído" (type 2)
-                    var tecnicoAtribuido = atores.FirstOrDefault(a =>
+                    // Procura por TODOS os atores do tipo "atribuído" (type 2)
+                    var tecnicosAtribuidos = atores.Where(a =>
                         a.TicketsId.HasValue && a.TicketsId.Value == chamado.Id && a.Type == 2);
 
-                    // Se encontrarmos o técnico e seu ID, usamos o mapa para obter o nome de login
-                    if (tecnicoAtribuido != null && !string.IsNullOrEmpty(tecnicoAtribuido.UsersId) && userMap.TryGetValue(tecnicoAtribuido.UsersId, out var nomeLogin))
+                    var nomesDosTecnicos = new List<string>();
+                    foreach (var tecnico in tecnicosAtribuidos)
                     {
-                        chamado.TecnicoAtribuido = nomeLogin;
+                        // Se encontrarmos o técnico e seu ID, usamos o mapa para obter o nome de login
+                        if (!string.IsNullOrEmpty(tecnico.UsersId) && userMap.TryGetValue(tecnico.UsersId, out var nomeLogin))
+                        {
+                            nomesDosTecnicos.Add(nomeLogin);
+                        }
+                    }
+
+                    if (nomesDosTecnicos.Any())
+                    {
+                        chamado.TecnicoAtribuido = string.Join(", ", nomesDosTecnicos.Distinct());
                     }
                 }
             }
