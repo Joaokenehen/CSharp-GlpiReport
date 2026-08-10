@@ -86,6 +86,16 @@
                                     Background="#0D6EFD" Foreground="White"
                                     Padding="15,8" CornerRadius="6" FontWeight="SemiBold"
                                     Cursor="Hand"/>
+                            <!-- NOVO BOTÃO DE EXPORTAR COM MENU -->
+                            <SplitButton Content="Exportar" Background="#0DCAF0" Foreground="Black" Padding="12,8" CornerRadius="6" FontWeight="SemiBold" Cursor="Hand">
+                                <SplitButton.Flyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="Copiar para Área de Transferência" Command="{Binding CopiarRelatorioCommand}"/>
+                                        <MenuItem Header="Gerar PDF (em breve)" Command="{Binding ExportarPdfCommand}"/>
+                                        <MenuItem Header="Gerar Word (em breve)" Command="{Binding ExportarWordCommand}"/>
+                                    </MenuFlyout>
+                                </SplitButton.Flyout>
+                            </SplitButton>
                         </StackPanel>
                     </WrapPanel>
                 </Border>

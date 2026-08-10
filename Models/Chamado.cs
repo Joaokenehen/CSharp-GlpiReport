@@ -22,6 +22,9 @@ public class Chamado
     [JsonPropertyName("closedate")]
     public string? DataFechamento { get; set; }
 
+    [JsonPropertyName("date_mod")]
+    public string? DataModificacao { get; set; }
+
     [JsonPropertyName("content")]
     public string Descricao { get; set; } = string.Empty;
 

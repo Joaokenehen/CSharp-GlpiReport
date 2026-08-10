@@ -5,9 +5,19 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text;
 using System.Net;
 using System.Text.RegularExpressions;
+using Avalonia.Input;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia;
+using Avalonia.Platform.Storage;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
+using Xceed.Words.NET;
+using System.IO;
 using RelatorioGLPIApp.Models;
+using RelatorioGLPIApp.Documents;
 using RelatorioGLPIApp.Services;
 
 namespace RelatorioGLPIApp.ViewModels;
@@ -63,35 +73,63 @@ public partial class DashboardViewModel : ViewModelBase
     private void AplicarFiltrosNaLista()
     {
         Relatorios.Clear();
-        string dataAlvo = DataSelecionada.ToString("yyyy-MM-dd");
-        _log.Info("Filtro", $"Buscando chamados para a data: {dataAlvo}...");
+
+        // 1. DEFINIÇÃO DAS JANELAS DE TEMPO
+        var diaSelecionado = DataSelecionada.Date;
+        DateTime inicioPlantao;
+
+        // Lógica de Plantão de Fim de Semana: Se hoje for segunda-feira, o plantão começa na sexta anterior.
+        if (diaSelecionado.DayOfWeek == DayOfWeek.Monday)
+        {
+            inicioPlantao = diaSelecionado.AddDays(-3).AddHours(18); // Sexta-feira, 18:00
+        }
+        else
+        {
+            inicioPlantao = diaSelecionado.AddDays(-1).AddHours(18); // Dia anterior, 18:00
+        }
+
+        var fimPlantao = diaSelecionado.AddHours(7).AddMinutes(30);   // 07:30 do dia atual
+        var inicioDiaNormal = fimPlantao;                            // Início do dia de trabalho
+        var fimDiaNormal = diaSelecionado.AddHours(18);              // Fim do dia de trabalho
+
+        _log.Info("Filtro", $"Filtrando chamados para o dia {diaSelecionado:dd/MM/yyyy}. Janela Plantão: {inicioPlantao:g} a {fimPlantao:g}.");
 
         int chamadosEncontrados = 0;
 
         foreach (var chamado in _todosOsChamados)
         {
-            bool criadoHoje = chamado.DataCriacao.StartsWith(dataAlvo);
-            bool solucionadoHoje = chamado.DataSolucao?.StartsWith(dataAlvo) ?? false;
-            bool fechadoHoje = chamado.DataFechamento?.StartsWith(dataAlvo) ?? false;
+            // Helper para converter as datas do GLPI para um formato utilizável
+            DateTime? ParseDate(string? dateStr) => DateTime.TryParse(dateStr, out var dt) ? dt : null;
 
-            if (!criadoHoje && !solucionadoHoje && !fechadoHoje) continue;
+            var dataCriacao = ParseDate(chamado.DataCriacao);
+            var dataSolucao = ParseDate(chamado.DataSolucao);
+            var dataFechamento = ParseDate(chamado.DataFechamento);
+            var dataModificacao = ParseDate(chamado.DataModificacao);
 
-            // Se passou da data, vamos "espiar" o que o GLPI mandou:
-            _log.Info("Debug", $"Chamado {chamado.Id} é relevante para hoje. Status: {chamado.Status} | Técnico no GLPI: '{chamado.TecnicoAtribuido}'");
+            // 2. VERIFICAÇÃO DE RELEVÂNCIA (se o chamado pertence ao relatório de hoje)
+            bool isPlantao = (dataSolucao >= inicioPlantao && dataSolucao < fimPlantao) ||
+                             (dataModificacao >= inicioPlantao && dataModificacao < fimPlantao);
 
-            // 2. FILTRO DE STATUS
-            // Permite todos os status de 1 (Novo) a 6 (Fechado)
+            bool isDiaNormal = (dataCriacao >= inicioDiaNormal && dataCriacao < fimDiaNormal) ||
+                               (dataSolucao >= inicioDiaNormal && dataSolucao < fimDiaNormal) ||
+                               (dataFechamento >= inicioDiaNormal && dataFechamento < fimDiaNormal);
+
+            if (!isPlantao && !isDiaNormal) continue;
+
+            // Se passou, o chamado é relevante. Agora aplicamos os outros filtros.
+            _log.Info("Debug", $"Chamado {chamado.Id} é relevante. Plantão: {isPlantao}, Dia Normal: {isDiaNormal}.");
+
+            // 3. FILTRO DE STATUS (mesma lógica de antes)
             if (chamado.Status < 1 || chamado.Status > 6)
             {
                 _log.Info("Debug", $"-> Chamado {chamado.Id} ignorado pois o Status é {chamado.Status}");
                 continue;
             }
 
-            // 3. FILTRO DE USUÁRIO TI
+            // 4. FILTRO DE USUÁRIO TI (mesma lógica de antes)
             if (!string.IsNullOrWhiteSpace(UsuarioTi))
             {
                 string tecnico = chamado.TecnicoAtribuido ?? "";
-
                 if (!tecnico.ToLower().Contains(UsuarioTi.ToLower()))
                 {
                     _log.Info("Debug", $"-> Chamado {chamado.Id} ignorado pelo Técnico. Você digitou '{UsuarioTi}', mas o GLPI mandou '{tecnico}'");
@@ -99,14 +137,24 @@ public partial class DashboardViewModel : ViewModelBase
                 }
             }
 
+            // 5. PREPARAÇÃO DOS DADOS PARA EXIBIÇÃO (mesma lógica de antes)
             string descricaoLimpa = WebUtility.HtmlDecode(chamado.Descricao ?? "");
             descricaoLimpa = descricaoLimpa.Replace("&nbsp;", " ");
             descricaoLimpa = Regex.Replace(descricaoLimpa, "<.*?>", string.Empty).Trim();
 
-            string arvoreEntidade = WebUtility.HtmlDecode(chamado.Entidade ?? "Matriz");
-            string categoriaAutomatica = arvoreEntidade.Contains("Filiais") ? "Suporte Filiais" : "Suporte Matriz";
+            // NOVA LÓGICA DE CATEGORIZAÇÃO
+            string categoriaFinal;
+            if (isPlantao)
+            {
+                categoriaFinal = "Plantão";
+            }
+            else
+            {
+                string arvoreEntidade = WebUtility.HtmlDecode(chamado.Entidade ?? "Matriz");
+                categoriaFinal = arvoreEntidade.Contains("Filiais") ? "Suporte Filiais" : "Suporte Matriz";
+            }
 
-            string[] partesEntidade = arvoreEntidade.Split('>');
+            string[] partesEntidade = WebUtility.HtmlDecode(chamado.Entidade ?? "Matriz").Split('>');
             string setor = partesEntidade[^1].Trim();
 
             string usuario = chamado.NomeUsuario ?? "Usuário";
@@ -137,7 +185,7 @@ public partial class DashboardViewModel : ViewModelBase
             }
 
             string titulo;
-            if (categoriaAutomatica == "Suporte Filiais")
+            if (categoriaFinal == "Suporte Filiais")
             {
                 titulo = $"~Chamado: {chamado.Id} – {setor}~";
             }
@@ -148,7 +196,7 @@ public partial class DashboardViewModel : ViewModelBase
 
             Relatorios.Add(new RelatorioItem
             {
-                Categoria = categoriaAutomatica,
+                Categoria = categoriaFinal,
                 Titulo = titulo,
                 Descricao = descricaoLimpa,
                 IsOrigemGlpi = true,
@@ -210,5 +258,213 @@ public partial class DashboardViewModel : ViewModelBase
         var listaOrdenada = Relatorios.OrderBy(x => ordem.TryGetValue(x.Categoria ?? "", out int peso) ? peso : 99).ToList();
         Relatorios.Clear();
         foreach (var item in listaOrdenada) Relatorios.Add(item);
+    }
+
+    [RelayCommand]
+    private void CopiarRelatorio()
+    {
+        string relatorioFinal = GerarTextoDoRelatorio();
+
+        var topLevel = Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+
+        if (topLevel?.Clipboard is { } clipboard)
+        {
+            // Usando SetText síncrono como fallback para versões mais antigas do Avalonia
+            clipboard.SetText(relatorioFinal);
+            _log.Sucesso("Relatório", "Relatório formatado copiado para a área de transferência!");
+        }
+        else
+        {
+            _log.Erro("Relatório", "Não foi possível acessar a área de transferência.");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportarPdf()
+    {
+        var topLevel = GetTopLevel();
+        if (topLevel == null)
+        {
+            _log.Erro("Exportar", "Não foi possível obter a janela principal para abrir o diálogo de salvamento.");
+            return;
+        }
+
+        var suggestedFileName = $"Relatorio_{UsuarioTi.Replace('.', '_')}_{DataSelecionada:yyyy_MM_dd}.pdf";
+
+        var file = await topLevel.Storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Salvar Relatório em PDF",
+            SuggestedFileName = suggestedFileName,
+            DefaultFileExtension = "pdf",
+            FileTypeChoices = new[] { new FilePickerFileType("Arquivos PDF") { Patterns = new[] { "*.pdf" } } }
+        });
+
+        if (file != null && file.Path.LocalPath != null)
+        {
+            try
+            {
+                var model = new RelatorioPdfModel(UsuarioTi, DataSelecionada, Relatorios.ToList());
+                var document = new RelatorioPdfDocument(model);
+                document.GeneratePdf(file.Path.LocalPath);
+                _log.Sucesso("Exportar", $"Relatório salvo com sucesso em: {file.Path.LocalPath}");
+            }
+            catch (Exception ex)
+            {
+                _log.Erro("Exportar PDF", $"Ocorreu um erro ao gerar o PDF: {ex.Message}");
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportarWord()
+    {
+        var topLevel = GetTopLevel();
+        if (topLevel == null)
+        {
+            _log.Erro("Exportar", "Não foi possível obter a janela principal para abrir o diálogo de salvamento.");
+            return;
+        }
+
+        var suggestedFileName = $"Relatorio_{UsuarioTi.Replace('.', '_')}_{DataSelecionada:yyyy_MM_dd}.docx";
+
+        var file = await topLevel.Storage.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Salvar Relatório em Word",
+            SuggestedFileName = suggestedFileName,
+            DefaultFileExtension = "docx",
+            FileTypeChoices = new[] { new FilePickerFileType("Documentos do Word") { Patterns = new[] { "*.docx" } } }
+        });
+
+        if (file != null && file.Path.LocalPath != null)
+        {
+            try
+            {
+                using (var document = DocX.Create(file.Path.LocalPath))
+                {
+                    GerarConteudoWord(document);
+                    document.Save();
+                }
+                _log.Sucesso("Exportar", $"Relatório salvo com sucesso em: {file.Path.LocalPath}");
+            }
+            catch (Exception ex)
+            {
+                _log.Erro("Exportar Word", $"Ocorreu um erro ao gerar o documento Word: {ex.Message}");
+            }
+        }
+    }
+
+    private Avalonia.Controls.TopLevel? GetTopLevel()
+    {
+        return Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+    }
+
+    private string GerarTextoDoRelatorio()
+    {
+        var sb = new StringBuilder();
+
+        // 1. Título Principal
+        string nomeTecnico = "Técnico";
+        if (!string.IsNullOrWhiteSpace(UsuarioTi))
+        {
+            nomeTecnico = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(UsuarioTi.Replace('.', ' '));
+        }
+        sb.AppendLine($"*Relatório {nomeTecnico} – {DataSelecionada:dd/MM/yyyy}*");
+        sb.AppendLine();
+
+        // 2. Mapeamento de categorias para o texto do relatório
+        var categoriasRelatorio = new Dictionary<string, string>
+        {
+            { "Suporte Matriz", "1.\tSuporte Matriz" },
+            { "Suporte Filiais", "2.\tSuporte Filiais" },
+            { "Saída e Entrada", "3.\tSaída/Entrada - Estoque" },
+            { "Outras Atividades", "4.\tOutras Atividades" },
+            { "Plantão", "5.\tPlantão" }
+        };
+
+        // 3. Iterar sobre as categorias e construir o relatório
+        foreach (var kvp in categoriasRelatorio)
+        {
+            string categoriaViewModel = kvp.Key;
+            string tituloCategoriaRelatorio = kvp.Value;
+
+            sb.AppendLine(tituloCategoriaRelatorio);
+
+            var itensDaCategoria = Relatorios.Where(r => r.Categoria == categoriaViewModel).ToList();
+
+            if (itensDaCategoria.Any())
+            {
+                char letraItem = 'a';
+                foreach (var item in itensDaCategoria)
+                {
+                    sb.AppendLine($"\t{letraItem}.\t{item.Titulo}");
+                    sb.AppendLine(item.Descricao);
+                    sb.AppendLine();
+                    letraItem++;
+                }
+            }
+            else
+            {
+                sb.AppendLine("\t-\tNada consta");
+                sb.AppendLine();
+            }
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private void GerarConteudoWord(DocX document)
+    {
+        // 1. Título Principal
+        string nomeTecnico = "Técnico";
+        if (!string.IsNullOrWhiteSpace(UsuarioTi))
+        {
+            nomeTecnico = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(UsuarioTi.Replace('.', ' '));
+        }
+        var tituloPrincipal = document.InsertParagraph($"Relatório {nomeTecnico} – {DataSelecionada:dd/MM/yyyy}");
+        tituloPrincipal.Bold().FontSize(16);
+        tituloPrincipal.Alignment = Alignment.center;
+        document.InsertParagraph(""); // Linha em branco
+
+        // 2. Mapeamento de categorias
+        var categoriasRelatorio = new Dictionary<string, string>
+        {
+            { "Suporte Matriz", "1. Suporte Matriz" },
+            { "Suporte Filiais", "2. Suporte Filiais" },
+            { "Saída e Entrada", "3. Saída/Entrada - Estoque" },
+            { "Outras Atividades", "4. Outras Atividades" },
+            { "Plantão", "5. Plantão" }
+        };
+
+        // 3. Iterar sobre as categorias
+        foreach (var kvp in categoriasRelatorio)
+        {
+            string categoriaViewModel = kvp.Key;
+            string tituloCategoriaRelatorio = kvp.Value;
+
+            document.InsertParagraph(tituloCategoriaRelatorio).Bold().FontSize(14);
+
+            var itensDaCategoria = Relatorios.Where(r => r.Categoria == categoriaViewModel).ToList();
+
+            if (itensDaCategoria.Any())
+            {
+                char letraItem = 'a';
+                foreach (var item in itensDaCategoria)
+                {
+                    document.InsertParagraph($"{letraItem}. {item.Titulo}").IndentationBefore = 20f;
+                    document.InsertParagraph(item.Descricao).IndentationBefore = 40f;
+                    document.InsertParagraph("");
+                    letraItem++;
+                }
+            }
+            else
+            {
+                document.InsertParagraph("- Nada consta").IndentationBefore = 20f;
+                document.InsertParagraph("");
+            }
+        }
     }
 }
