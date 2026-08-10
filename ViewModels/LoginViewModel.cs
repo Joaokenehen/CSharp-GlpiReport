@@ -13,6 +13,7 @@ public partial class LoginViewModel : ViewModelBase
     public Action<GlpiConnectionInfo>? AoLogarComSucesso { get; set; }
     private readonly IGlpiAuthService _authService;
     private readonly IChamadoService _chamadoService;
+    private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
     private string _urlGlpi = "https://suporte.expnordeste.com.br/apirest.php"; // Colocar URl do seu GLPI
@@ -35,12 +36,30 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private char? _tokenPasswordChar = '*';
 
+    [ObservableProperty]
+    private bool _isRememberMe;
+
     public LoginViewModel()
     {
         ILogService logger = new LogService();
 
         _authService = new GLPIAuthService(logger);
         _chamadoService = new ChamadoService(logger);
+        _settingsService = new SettingsService();
+
+        LoadSavedCredentials();
+    }
+
+    private void LoadSavedCredentials()
+    {
+        var credentials = _settingsService.LoadCredentials();
+        if (credentials != null)
+        {
+            UrlGlpi = credentials.UrlGlpi;
+            UserToken = credentials.UserToken;
+            AppToken = credentials.AppToken;
+            IsRememberMe = true;
+        }
     }
 
     [RelayCommand]
@@ -53,6 +72,16 @@ public partial class LoginViewModel : ViewModelBase
 
         if (sucesso)
         {
+            if (IsRememberMe)
+            {
+                var credentials = new LoginCredentials { UrlGlpi = this.UrlGlpi, UserToken = this.UserToken, AppToken = this.AppToken };
+                _settingsService.SaveCredentials(credentials);
+            }
+            else
+            {
+                _settingsService.ClearCredentials();
+            }
+
             Mensagem = "Autenticado com sucesso! Iniciando sessão.";
             string sessionToken = _authService.SessionToken ?? "";
             var listaDeChamados = await _chamadoService.ObterChamadosAsync(UrlGlpi, AppToken, sessionToken);
