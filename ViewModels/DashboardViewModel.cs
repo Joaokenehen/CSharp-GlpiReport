@@ -56,6 +56,18 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSearching;
 
+    [ObservableProperty]
+    private int _totalItensRelatorio;
+
+    [ObservableProperty]
+    private int _totalItensSolucionados;
+
+    [ObservableProperty]
+    private int _totalChamadosAbertos;
+
+    [ObservableProperty]
+    private string _buscarChamadosButtonText = "Buscar Chamados";
+
     public Action? OnLogoutRequested { get; set; }
     public Action<RelatorioItem>? OnItemAdded { get; set; }
 
@@ -99,6 +111,7 @@ public partial class DashboardViewModel : ViewModelBase
         _log.Info("Filtro", $"Filtrando chamados para o dia {diaSelecionado:dd/MM/yyyy}. Janela Plantão: {inicioPlantao:g} a {fimPlantao:g}.");
 
         int chamadosEncontrados = 0;
+        int chamadosAbertosNoDia = 0;
 
         foreach (var chamado in _todosOsChamados)
         {
@@ -109,6 +122,9 @@ public partial class DashboardViewModel : ViewModelBase
             var dataSolucao = ParseDate(chamado.DataSolucao);
             var dataFechamento = ParseDate(chamado.DataFechamento);
             var dataModificacao = ParseDate(chamado.DataModificacao);
+
+            // Verifica se o chamado foi criado durante o dia de trabalho normal
+            bool criadoNoDiaNormal = dataCriacao >= inicioDiaNormal && dataCriacao < fimDiaNormal;
 
             // 2. VERIFICAÇÃO DE RELEVÂNCIA (se o chamado pertence ao relatório de hoje)
             bool isPlantao = (dataSolucao >= inicioPlantao && dataSolucao < fimPlantao) ||
@@ -156,6 +172,12 @@ public partial class DashboardViewModel : ViewModelBase
             {
                 string arvoreEntidade = WebUtility.HtmlDecode(chamado.Entidade ?? "Matriz");
                 categoriaFinal = arvoreEntidade.Contains("Filiais") ? "Suporte Filiais" : "Suporte Matriz";
+            }
+
+            // Contabiliza o KPI de chamados abertos no dia
+            if (criadoNoDiaNormal && (categoriaFinal == "Suporte Matriz" || categoriaFinal == "Suporte Filiais"))
+            {
+                chamadosAbertosNoDia++;
             }
 
             string[] partesEntidade = WebUtility.HtmlDecode(chamado.Entidade ?? "Matriz").Split('>');
@@ -218,12 +240,16 @@ public partial class DashboardViewModel : ViewModelBase
             _log.Sucesso("Filtro", $"{chamadosEncontrados} chamados aprovados nos filtros.");
         else
             _log.Info("Filtro", "Nenhum chamado passou.");
+
+        TotalChamadosAbertos = chamadosAbertosNoDia;
+        UpdateKpis();
     }
 
     [RelayCommand] // Este comando agora busca os dados mais recentes e aplica os filtros.
     private async Task BuscarChamados()
     {
         IsSearching = true;
+        BuscarChamadosButtonText = "Buscando...";
         try
         {
             _log.Info("Busca", "Iniciando busca e atualização de chamados no GLPI...");
@@ -235,6 +261,7 @@ public partial class DashboardViewModel : ViewModelBase
         finally
         {
             IsSearching = false;
+            BuscarChamadosButtonText = "Buscar Chamados";
         }
     }
 
@@ -255,17 +282,21 @@ public partial class DashboardViewModel : ViewModelBase
 
         Relatorios.Add(novoItem);
         OrdenarLista();
+        UpdateKpis();
         OnItemAdded?.Invoke(novoItem);
     }
 
     [RelayCommand]
     private void RemoverItem(RelatorioItem itemParaRemover)
     {
-        if (itemParaRemover != null) Relatorios.Remove(itemParaRemover);
+        if (itemParaRemover != null && Relatorios.Remove(itemParaRemover))
+            UpdateKpis();
     }
 
     private void OrdenarLista()
     {
+        // ... (código existente)
+
         var ordem = new Dictionary<string, int>
         {
             { "Suporte Matriz", 1 }, { "Suporte Filiais", 2 },
@@ -331,7 +362,7 @@ public partial class DashboardViewModel : ViewModelBase
                 // Usar um stream para escrever o arquivo é mais robusto
                 await using (var stream = await file.OpenWriteAsync())
                 {
-                    var model = new RelatorioPdfModel(UsuarioTi, DataSelecionada, Relatorios.ToList());
+                    var model = new RelatorioPdfModel(UsuarioTi, DataSelecionada, Relatorios.ToList(), TotalItensRelatorio, TotalItensSolucionados, TotalChamadosAbertos);
                     var document = new RelatorioPdfDocument(model);
                     document.GeneratePdf(stream);
                 }
@@ -404,6 +435,8 @@ public partial class DashboardViewModel : ViewModelBase
         }
         sb.AppendLine($"*Relatório {nomeTecnico} – {DataSelecionada:dd/MM/yyyy}*");
         sb.AppendLine();
+        sb.AppendLine($"*Abertos: {TotalChamadosAbertos} | Solucionados: {TotalItensSolucionados} | Total: {TotalItensRelatorio}*");
+        sb.AppendLine();
 
         // 2. Mapeamento de categorias para o texto do relatório
         var categoriasRelatorio = new Dictionary<string, string>
@@ -459,6 +492,10 @@ public partial class DashboardViewModel : ViewModelBase
         tituloPrincipal.Alignment = Alignment.center;
         document.InsertParagraph(""); // Linha em branco
 
+        var kpiParagraph = document.InsertParagraph($"Abertos: {TotalChamadosAbertos} | Solucionados: {TotalItensSolucionados} | Total: {TotalItensRelatorio}");
+        kpiParagraph.FontSize(11).Italic().Alignment = Alignment.center;
+        document.InsertParagraph(""); // Linha em branco
+
         // 2. Mapeamento de categorias
         var categoriasRelatorio = new Dictionary<string, string>
         {
@@ -504,5 +541,11 @@ public partial class DashboardViewModel : ViewModelBase
         IsNotificationVisible = true;
         await Task.Delay(durationMs);
         IsNotificationVisible = false;
+    }
+
+    private void UpdateKpis()
+    {
+        TotalItensRelatorio = Relatorios.Count;
+        TotalItensSolucionados = Relatorios.Count(r => r.StatusTag == "Solucionado" || r.StatusTag == "Fechado");
     }
 }

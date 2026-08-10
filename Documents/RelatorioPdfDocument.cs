@@ -41,6 +41,10 @@ public class RelatorioPdfDocument : IDocument
             column.Item().AlignCenter().Text($"Relatório {_model.NomeTecnico} – {_model.DataRelatorio:dd/MM/yyyy}")
                 .SemiBold().FontSize(16);
 
+            // NOVO: Adiciona os KPIs
+            column.Item().AlignCenter().Text($"Abertos: {_model.TotalChamadosAbertos} | Solucionados: {_model.TotalSolucionados} | Total: {_model.TotalItens}")
+                .FontSize(11).Italic();
+
             column.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
         });
     }
