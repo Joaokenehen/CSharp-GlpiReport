@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Text;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Windows.Input;
 using Avalonia.Input;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia;
@@ -51,6 +52,9 @@ public partial class DashboardViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isNotificationVisible;
+
+    [ObservableProperty]
+    private bool _isSearching;
 
     public Action? OnLogoutRequested { get; set; }
     public Action<RelatorioItem>? OnItemAdded { get; set; }
@@ -219,11 +223,19 @@ public partial class DashboardViewModel : ViewModelBase
     [RelayCommand] // Este comando agora busca os dados mais recentes e aplica os filtros.
     private async Task BuscarChamados()
     {
-        _log.Info("Busca", "Iniciando busca e atualização de chamados no GLPI...");
-        _todosOsChamados = await _chamadoService.ObterChamadosAsync(_url, _appToken, _sessionToken);
-        _log.Sucesso("Busca", $"{_todosOsChamados.Count} chamados sincronizados com o GLPI.");
+        IsSearching = true;
+        try
+        {
+            _log.Info("Busca", "Iniciando busca e atualização de chamados no GLPI...");
+            _todosOsChamados = await _chamadoService.ObterChamadosAsync(_url, _appToken, _sessionToken);
+            _log.Sucesso("Busca", $"{_todosOsChamados.Count} chamados sincronizados com o GLPI.");
 
-        AplicarFiltrosNaLista();
+            AplicarFiltrosNaLista();
+        }
+        finally
+        {
+            IsSearching = false;
+        }
     }
 
     [RelayCommand]

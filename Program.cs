@@ -1,5 +1,8 @@
 ﻿using Avalonia;
 using System;
+#if DEBUG
+using Avalonia.Diagnostics;
+#endif
 using QuestPDF.Infrastructure;
 
 namespace RelatorioGLPIApp;
@@ -21,9 +24,6 @@ sealed class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
-#if DEBUG
-            .WithDeveloperTools()
-#endif
             .WithInterFont()
             .LogToTrace();
 }

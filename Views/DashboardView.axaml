@@ -73,15 +73,19 @@
                         <!-- User Filter -->
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,20,5">
                             <TextBlock Text="Usuário:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D"/>
-                            <TextBox Text="{Binding UsuarioTi}" PlaceholderText="Ex: joao.gustavo" Width="140" Height="35" CornerRadius="6" Padding="10,6"/>
+                            <TextBox Text="{Binding UsuarioTi}" Watermark="Ex: joao.gustavo" Width="140" Height="35" CornerRadius="6" Padding="10,6"/>
                         </StackPanel>
 
                         <!-- Search Button -->
-                        <Button Content="Buscar Chamados"
-                                Command="{Binding BuscarChamadosCommand}"
-                                Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1"
-                                Foreground="#495057" Padding="15,7" CornerRadius="6" Cursor="Hand"
-                                VerticalAlignment="Center" Margin="0,0,20,5"/>
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,20,5">
+                            <Button Content="Buscar Chamados"
+                                    Command="{Binding BuscarChamadosCommand}"
+                                    IsEnabled="{Binding !IsSearching}"
+                                    Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1"
+                                    Foreground="#495057" Padding="15,7" CornerRadius="6" Cursor="Hand"
+                                    VerticalAlignment="Center"/>
+                            <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSearching}" Width="20" Height="20" VerticalAlignment="Center"/>
+                        </StackPanel>
 
                         <!-- Separator -->
                         <Border Background="#DEE2E6" Width="1" Height="25" VerticalAlignment="Center" Margin="0,0,20,5"/>
@@ -142,12 +146,13 @@
 
                                 <!-- Botão Lixeira -->
                                 <Button Grid.Row="0" Grid.Column="1"
-                                        Content="✕ Remover"
                                         Command="{Binding #RootControl.DataContext.RemoverItemCommand}"
                                         CommandParameter="{Binding}"
-                                        Background="Transparent" Foreground="#DC3545" FontWeight="SemiBold"
-                                        Padding="5" Cursor="Hand" Margin="0,-5,-5,0"/>
-
+                                        Background="Transparent"
+                                        Padding="5" Cursor="Hand" Margin="0,-5,-5,0">
+                                    <PathIcon Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                                              Foreground="#DC3545" Width="16" Height="16"/>
+                                </Button>
                                 <!-- Título do Card -->
                                 <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                          Text="{Binding Titulo}"

@@ -7,7 +7,7 @@ namespace RelatorioGLPIApp.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private ViewModelBase _paginaAtual;
+    private ViewModelBase _paginaAtual = null!;
 
     public MainWindowViewModel()
     {

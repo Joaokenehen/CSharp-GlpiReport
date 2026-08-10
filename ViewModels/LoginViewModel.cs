@@ -29,6 +29,12 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoading;
 
+    [ObservableProperty]
+    private bool _areTokensVisible;
+
+    [ObservableProperty]
+    private char? _tokenPasswordChar = '*';
+
     public LoginViewModel()
     {
         ILogService logger = new LogService();
@@ -60,5 +66,12 @@ public partial class LoginViewModel : ViewModelBase
             Mensagem = "Erro: Verifique seus tokens ou a URL.";
         }
         IsLoading = false;
+    }
+
+    [RelayCommand]
+    private void ToggleTokenVisibility()
+    {
+        AreTokensVisible = !AreTokensVisible;
+        TokenPasswordChar = AreTokensVisible ? null : '*';
     }
 }
