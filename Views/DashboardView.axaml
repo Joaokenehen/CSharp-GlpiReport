@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:RelatorioGLPIApp.ViewModels"
-             xmlns:models="using:RelatorioGLPIApp.Models"
              x:Class="RelatorioGLPIApp.Views.DashboardView"
              x:DataType="vm:DashboardViewModel"
              x:Name="RootControl"
@@ -88,17 +87,20 @@
                         <Border Background="#DEE2E6" Width="1" Height="25" VerticalAlignment="Center" Margin="0,0,20,5"/>
 
                         <!-- Manual Add -->
-                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,10,5">
-                            <ComboBox ItemsSource="{Binding CategoriasDisponiveis}"
-                                      SelectedItem="{Binding CategoriaSelecionadaNova}"
-                                      Width="180" Height="38" CornerRadius="6"/>
-                            <Button Content="+ Adicionar"
-                                    Command="{Binding AdicionarItemManualCommand}"
-                                    Background="#0D6EFD" Foreground="White"
-                                    Padding="15,8" CornerRadius="6" FontWeight="SemiBold"
-                                    Cursor="Hand"/>
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,0,5">
+                            <Button Content="+ Adicionar" Background="#0D6EFD" Foreground="White" Padding="15,8" CornerRadius="6" FontWeight="SemiBold" Cursor="Hand">
+                                <Button.Flyout>
+                                    <MenuFlyout>
+                                        <MenuItem Header="Suporte Matriz" Command="{Binding AdicionarItemManualPorCategoriaCommand}" CommandParameter="Suporte Matriz"/>
+                                        <MenuItem Header="Suporte Filiais" Command="{Binding AdicionarItemManualPorCategoriaCommand}" CommandParameter="Suporte Filiais"/>
+                                        <MenuItem Header="Saída/Entrada - Estoque" Command="{Binding AdicionarItemManualPorCategoriaCommand}" CommandParameter="Saída e Entrada"/>
+                                        <MenuItem Header="Outras Atividades" Command="{Binding AdicionarItemManualPorCategoriaCommand}" CommandParameter="Outras Atividades"/>
+                                        <MenuItem Header="Plantão" Command="{Binding AdicionarItemManualPorCategoriaCommand}" CommandParameter="Plantão"/>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                            </Button>
                             <!-- BOTÃO DE EXPORTAR COM MENU SUSPENSO -->
-                            <Button Content="Exportar" Background="#0DCAF0" Foreground="Black" Padding="12,8" CornerRadius="6" FontWeight="SemiBold" Cursor="Hand">
+                            <Button Content="Exportar" Background="#0DCAF0" Foreground="Black" Padding="12,8" CornerRadius="6" FontWeight="SemiBold" Cursor="Hand" Margin="10,0,0,0">
                                 <Button.Flyout>
                                     <MenuFlyout>
                                         <MenuItem Header="Copiar para Área de Transferência" Command="{Binding CopiarRelatorioCommand}"/>
@@ -114,8 +116,8 @@
         </Border>
 
         <!-- 2. ÁREA DOS CARDS -->
-        <ScrollViewer Grid.Row="1" Padding="30">
-            <ItemsControl ItemsSource="{Binding Relatorios}">
+        <ScrollViewer Grid.Row="1" Padding="30" x:Name="CardsScrollViewer">
+            <ItemsControl ItemsSource="{Binding Relatorios}" x:Name="RelatoriosItemsControl">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RelatorioItem">
 
@@ -141,7 +143,7 @@
                                 <!-- Botão Lixeira -->
                                 <Button Grid.Row="0" Grid.Column="1"
                                         Content="✕ Remover"
-                                        Command="{Binding #RootControl.((vm:DashboardViewModel)DataContext).RemoverItemCommand}"
+                                        Command="{Binding #RootControl.DataContext.RemoverItemCommand}"
                                         CommandParameter="{Binding}"
                                         Background="Transparent" Foreground="#DC3545" FontWeight="SemiBold"
                                         Padding="5" Cursor="Hand" Margin="0,-5,-5,0"/>

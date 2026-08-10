@@ -46,18 +46,6 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private string _usuarioTi = "";
 
-    public ObservableCollection<string> CategoriasDisponiveis { get; } = new()
-    {
-        "Suporte Matriz",
-        "Suporte Filiais",
-        "Saída e Entrada",
-        "Outras Atividades",
-        "Plantão"
-    };
-
-    [ObservableProperty]
-    private string _categoriaSelecionadaNova = "Outras Atividades";
-
     [ObservableProperty]
     private string _notificationMessage = string.Empty;
 
@@ -65,6 +53,7 @@ public partial class DashboardViewModel : ViewModelBase
     private bool _isNotificationVisible;
 
     public Action? OnLogoutRequested { get; set; }
+    public Action<RelatorioItem>? OnItemAdded { get; set; }
 
     public DashboardViewModel(GlpiConnectionInfo connectionInfo)
     {
@@ -238,18 +227,23 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void AdicionarItemManual()
+    private void AdicionarItemManualPorCategoria(string categoria)
     {
-        Relatorios.Add(new RelatorioItem
+        if (string.IsNullOrEmpty(categoria)) return;
+
+        var novoItem = new RelatorioItem
         {
-            Categoria = CategoriaSelecionadaNova,
+            Categoria = categoria,
             Titulo = "~Nova Atividade~",
             Descricao = "Descreva o que foi feito aqui...",
             IsOrigemGlpi = false,
             StatusTag = "Manual",
             CorStatus = "#6F42C1" // Roxo para os manuais
-        });
+        };
+
+        Relatorios.Add(novoItem);
         OrdenarLista();
+        OnItemAdded?.Invoke(novoItem);
     }
 
     [RelayCommand]
