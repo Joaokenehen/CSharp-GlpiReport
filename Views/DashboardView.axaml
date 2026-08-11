@@ -56,8 +56,14 @@
                                         <MenuItem.ItemTemplate>
                                             <DataTemplate>
                                                 <!-- O Header é o nome do arquivo, o CommandParameter também -->
-                                                <MenuItem Header="{Binding}" Command="{Binding #RootControl.DataContext.LoadStateCommand}" CommandParameter="{Binding}"/>
-                                            </DataTemplate>
+                                                <MenuItem Header="{Binding}">
+                                                    <MenuItem Header="Carregar"
+                                                              Command="{Binding #RootControl.DataContext.LoadStateCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Excluir"
+                                                              Command="{Binding #RootControl.DataContext.DeleteSavedReportCommand}"
+                                                              CommandParameter="{Binding}"/>
+                                                </MenuItem>                                            </DataTemplate>
                                         </MenuItem.ItemTemplate>
                                     </MenuItem>
                                 </MenuFlyout>

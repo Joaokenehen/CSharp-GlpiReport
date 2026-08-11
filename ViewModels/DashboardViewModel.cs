@@ -419,6 +419,26 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task DeleteSavedReport(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+
+        var messageBox = MessageBoxManager.GetMessageBoxStandard(
+            "Excluir Relatório",
+            $"Tem certeza que deseja excluir o relatório '{reportId}'?",
+            ButtonEnum.YesNo,
+            Icon.Warning);
+
+        var result = await messageBox.ShowAsync();
+        if (result == ButtonResult.Yes)
+        {
+            await _reportStateService.Delete(reportId);
+            await LoadSavedReportsList();
+            await ShowNotificationAsync($"Relatório '{reportId}' excluído com sucesso!");
+        }
+    }
+
+    [RelayCommand]
     private async Task ExportarPdf()
     {
         var topLevel = GetTopLevel();

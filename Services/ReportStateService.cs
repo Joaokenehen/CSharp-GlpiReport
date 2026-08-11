@@ -63,6 +63,21 @@ namespace RelatorioGLPIApp.Services
             return Task.FromResult(File.Exists(filePath));
         }
 
+        public Task Delete(string reportId)
+        {
+            if (string.IsNullOrWhiteSpace(reportId))
+            {
+                return Task.CompletedTask;
+            }
+
+            var filePath = Path.Combine(_reportsPath, reportId);
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+            return Task.CompletedTask;
+        }
+
         private string GetFinalFileName(string reportName)
         {
             var sanitizedName = string.Join("_", reportName.Split(Path.GetInvalidFileNameChars()));
