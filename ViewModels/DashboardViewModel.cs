@@ -97,7 +97,13 @@ public partial class DashboardViewModel : ViewModelBase
 
     private void AplicarFiltrosNaLista()
     {
-        Relatorios.Clear();
+        // Em vez de limpar tudo, removemos apenas os itens que vieram do GLPI,
+        // preservando os itens adicionados manualmente.
+        var itensDoGlpi = Relatorios.Where(r => r.IsOrigemGlpi).ToList();
+        foreach (var item in itensDoGlpi)
+        {
+            Relatorios.Remove(item);
+        }
         _log.Info("Filtro", $"Iniciando filtragem para o dia selecionado (local): {DataSelecionada:dd/MM/yyyy HH:mm:ss zzz}");
 
         // 1. DEFINIÇÃO DAS JANELAS DE TEMPO (todas em UTC para comparação consistente)
