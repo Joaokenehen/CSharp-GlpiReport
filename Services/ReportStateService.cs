@@ -63,7 +63,7 @@ namespace RelatorioGLPIApp.Services
             return Task.FromResult(File.Exists(filePath));
         }
 
-        public Task Delete(string reportId)
+        public Task DeleteState(string reportId)
         {
             if (string.IsNullOrWhiteSpace(reportId))
             {

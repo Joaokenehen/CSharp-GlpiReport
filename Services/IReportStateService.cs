@@ -11,6 +11,6 @@ namespace RelatorioGLPIApp.Services
         Task<SavedReportState?> LoadState(string reportId);
         Task<List<string>> GetSavedReportIds();
         Task<bool> ReportExists(string reportName);
-        Task Delete(string reportId);
+        Task DeleteState(string reportId);
     }
 }

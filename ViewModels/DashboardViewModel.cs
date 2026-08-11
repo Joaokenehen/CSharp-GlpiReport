@@ -23,7 +23,6 @@ using MsBox.Avalonia.Enums;
 using MessageBox.Avalonia.Enums;
 
 
-
 namespace RelatorioGLPIApp.ViewModels;
 
 public partial class DashboardViewModel : ViewModelBase
@@ -99,59 +98,124 @@ public partial class DashboardViewModel : ViewModelBase
     private void AplicarFiltrosNaLista()
     {
         Relatorios.Clear();
+        _log.Info("Filtro", $"Iniciando filtragem para o dia selecionado (local): {DataSelecionada:dd/MM/yyyy HH:mm:ss zzz}");
 
-        // 1. DEFINIÇÃO DAS JANELAS DE TEMPO
-        var diaSelecionado = DataSelecionada.Date;
-        DateTime inicioPlantao;
+        // 1. DEFINIÇÃO DAS JANELAS DE TEMPO (todas em UTC para comparação consistente)
+        // Usamos DataSelecionada (que é local) como base para definir os horários locais
+        var diaSelecionadoLocal = DataSelecionada.Date; // Ex: 2026-08-11 00:00:00 -03:00
+
+        DateTimeOffset inicioPlantaoLocal;
 
         // Lógica de Plantão de Fim de Semana: Se hoje for segunda-feira, o plantão começa na sexta anterior.
-        if (diaSelecionado.DayOfWeek == DayOfWeek.Monday)
+        if (DataSelecionada.DayOfWeek == DayOfWeek.Monday) // Usamos DataSelecionada para o DayOfWeek, que é local
         {
-            inicioPlantao = diaSelecionado.AddDays(-3).AddHours(18); // Sexta-feira, 18:00
+            inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-3).AddHours(18); // Sexta-feira, 18:00 local
         }
         else
         {
-            inicioPlantao = diaSelecionado.AddDays(-1).AddHours(18); // Dia anterior, 18:00
+            inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-1).AddHours(18); // Dia anterior, 18:00 local
         }
 
-        var fimPlantao = diaSelecionado.AddHours(7).AddMinutes(30);   // 07:30 do dia atual
-        var inicioAlmocoPlantao = diaSelecionado.AddHours(11).AddMinutes(30); // 11:30 do dia atual
-        var fimAlmocoPlantao = diaSelecionado.AddHours(13).AddMinutes(30);   // 13:30 do dia atual
-        var inicioDiaNormal = fimPlantao;                            // Início do dia de trabalho
-        var fimDiaNormal = diaSelecionado.AddHours(18);              // Fim do dia de trabalho
+        var fimPlantaoLocal = diaSelecionadoLocal.AddHours(7).AddMinutes(30);   // 07:30 do dia atual local
+        var inicioAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(11).AddMinutes(30); // 11:30 do dia atual local
+        var fimAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(13).AddMinutes(30);   // 13:30 do dia atual local
+        var inicioDiaNormalLocal = fimPlantaoLocal;                            // Início do dia de trabalho local
+        var fimDiaNormalLocal = diaSelecionadoLocal.AddHours(18);              // Fim do dia de trabalho local
 
-        _log.Info("Filtro", $"Filtrando chamados para o dia {diaSelecionado:dd/MM/yyyy}. Janela Plantão (Noite): {inicioPlantao:g} a {fimPlantao:g}. Janela Plantão (Almoço): {inicioAlmocoPlantao:g} a {fimAlmocoPlantao:g}.");
+        // Agora, converte todas as janelas para UTC para comparação com os dados do GLPI (que serão convertidos para UTC)
+        var inicioPlantaoUtc = inicioPlantaoLocal.ToUniversalTime();
+        var fimPlantaoUtc = fimPlantaoLocal.ToUniversalTime();
+        var inicioAlmocoPlantaoUtc = inicioAlmocoPlantaoLocal.ToUniversalTime();
+        var fimAlmocoPlantaoUtc = fimAlmocoPlantaoLocal.ToUniversalTime();
+        var inicioDiaNormalUtc = inicioDiaNormalLocal.ToUniversalTime();
+        var fimDiaNormalUtc = fimDiaNormalLocal.ToUniversalTime();
+
+        _log.Info("Filtro", $"Janelas de tempo (UTC):");
+        _log.Info("Filtro", $"  Plantão (Noite): {inicioPlantaoUtc:g} a {fimPlantaoUtc:g}");
+        _log.Info("Filtro", $"  Plantão (Almoço): {inicioAlmocoPlantaoUtc:g} a {fimAlmocoPlantaoUtc:g}");
+        _log.Info("Filtro", $"  Dia Normal: {inicioDiaNormalUtc:g} a {fimDiaNormalUtc:g}");
 
         int chamadosEncontrados = 0;
         int chamadosAbertosNoDia = 0;
 
         foreach (var chamado in _todosOsChamados)
         {
-            // Helper para converter as datas do GLPI para um formato utilizável
-            DateTime? ParseDate(string? dateStr) => DateTime.TryParse(dateStr, out var dt) ? dt : null;
+            // Helper para converter as datas do GLPI para UTC
+            DateTime? ParseDate(string? dateStr)
+            {
+                if (string.IsNullOrWhiteSpace(dateStr)) return null;
+                // A API do GLPI geralmente retorna datas em horário local sem indicação de fuso.
+                // Assumimos que a string é local e convertemos para UTC para comparação consistente.
+                if (DateTime.TryParse(dateStr, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeLocal, out var dt)) return dt.ToUniversalTime();
+                return null;
+            }
 
             var dataCriacao = ParseDate(chamado.DataCriacao);
             var dataSolucao = ParseDate(chamado.DataSolucao);
             var dataFechamento = ParseDate(chamado.DataFechamento);
             var dataModificacao = ParseDate(chamado.DataModificacao);
+            var dataAtribuicao = ParseDate(chamado.DataAtribuicao); // NOVO: Data de atribuição
 
             // Verifica se o chamado foi criado durante o dia de trabalho normal
-            bool criadoNoDiaNormal = dataCriacao >= inicioDiaNormal && dataCriacao < fimDiaNormal;
+            bool criadoNoDiaNormal = dataCriacao >= inicioDiaNormalUtc && dataCriacao < fimDiaNormalUtc;
 
             // 2. VERIFICAÇÃO DE RELEVÂNCIA (se o chamado pertence ao relatório de hoje)
-            bool isPlantao = ((dataSolucao >= inicioPlantao && dataSolucao < fimPlantao) ||
-                              (dataModificacao >= inicioPlantao && dataModificacao < fimPlantao)) ||
-                             ((dataSolucao >= inicioAlmocoPlantao && dataSolucao < fimAlmocoPlantao) ||
-                              (dataModificacao >= inicioAlmocoPlantao && dataModificacao < fimAlmocoPlantao));
+            bool isPlantao = false;
+            // Se o chamado foi CRIADO no horário de plantão, ele é de plantão.
+            if (dataCriacao.HasValue)
+            {
+                if ((dataCriacao.Value >= inicioPlantaoUtc && dataCriacao.Value < fimPlantaoUtc) ||
+                    (dataCriacao.Value >= inicioAlmocoPlantaoUtc && dataCriacao.Value < fimAlmocoPlantaoUtc))
+                {
+                    isPlantao = true;
+                }
+            }
 
-            bool isDiaNormal = (dataCriacao >= inicioDiaNormal && dataCriacao < fimDiaNormal) ||
-                               (dataSolucao >= inicioDiaNormal && dataSolucao < fimDiaNormal) ||
-                               (dataFechamento >= inicioDiaNormal && dataFechamento < fimDiaNormal);
+            // Verifica por data de solução
+            if (!isPlantao && dataSolucao.HasValue)
+            {
+                if ((dataSolucao.Value >= inicioPlantaoUtc && dataSolucao.Value < fimPlantaoUtc) ||
+                    (dataSolucao.Value >= inicioAlmocoPlantaoUtc && dataSolucao.Value < fimAlmocoPlantaoUtc))
+                {
+                    isPlantao = true;
+                }
+            }
+            // Se ainda não for plantão, verifica por data de modificação
+            if (!isPlantao && dataModificacao.HasValue)
+            {
+                if ((dataModificacao.Value >= inicioPlantaoUtc && dataModificacao.Value < fimPlantaoUtc) ||
+                    (dataModificacao.Value >= inicioAlmocoPlantaoUtc && dataModificacao.Value < fimAlmocoPlantaoUtc))
+                {
+                    isPlantao = true;
+                }
+            }
+            // Se ainda não for plantão, verifica por data de atribuição (se houver)
+            if (!isPlantao && dataAtribuicao.HasValue)
+            {
+                if ((dataAtribuicao.Value >= inicioPlantaoUtc && dataAtribuicao.Value < fimPlantaoUtc) ||
+                    (dataAtribuicao.Value >= inicioAlmocoPlantaoUtc && dataAtribuicao.Value < fimAlmocoPlantaoUtc))
+                {
+                    isPlantao = true;
+                }
+            }
+
+            bool isDiaNormal = false;
+            if (dataCriacao.HasValue && (dataCriacao.Value >= inicioDiaNormalUtc && dataCriacao.Value < fimDiaNormalUtc)) isDiaNormal = true;
+            if (!isDiaNormal && dataSolucao.HasValue && (dataSolucao.Value >= inicioDiaNormalUtc && dataSolucao.Value < fimDiaNormalUtc)) isDiaNormal = true;
+            if (!isDiaNormal && dataFechamento.HasValue && (dataFechamento.Value >= inicioDiaNormalUtc && dataFechamento.Value < fimDiaNormalUtc)) isDiaNormal = true;
+
+            _log.Info("Debug", $"Chamado {chamado.Id}:");
+            _log.Info("Debug", $"  Data Criação (UTC): {dataCriacao:g}");
+            _log.Info("Debug", $"  Data Solução (UTC): {dataSolucao:g}");
+            _log.Info("Debug", $"  Data Modificação (UTC): {dataModificacao:g}");
+            _log.Info("Debug", $"  Data Atribuição (UTC): {dataAtribuicao:g}"); // NOVO: Log da data de atribuição
+            _log.Info("Debug", $"  Criado no Dia Normal: {criadoNoDiaNormal}");
+            _log.Info("Debug", $"  É Plantão: {isPlantao}");
+            _log.Info("Debug", $"  É Dia Normal: {isDiaNormal}");
 
             if (!isPlantao && !isDiaNormal) continue;
 
-            // Se passou, o chamado é relevante. Agora aplicamos os outros filtros.
-            _log.Info("Debug", $"Chamado {chamado.Id} é relevante. Plantão: {isPlantao}, Dia Normal: {isDiaNormal}.");
+            _log.Info("Debug", $"-> Chamado {chamado.Id} é relevante para o relatório.");
 
             // 3. FILTRO DE STATUS (mesma lógica de antes)
             if (chamado.Status < 1 || chamado.Status > 6)
@@ -353,7 +417,7 @@ public partial class DashboardViewModel : ViewModelBase
                 "Arquivo Existente",
                 $"Um relatório com o nome {ReportSaveName} já existe.\nDeseja substituí-lo?",
                 ButtonEnum.YesNo,
-                MsBox.Avalonia.Enums.Icon.Warning); // <-- Correção aqui
+                Icon.Warning);
 
             var result = await messageBox.ShowAsync();
             shouldSave = result == ButtonResult.Yes;
@@ -445,7 +509,7 @@ public partial class DashboardViewModel : ViewModelBase
         var result = await messageBox.ShowAsync();
         if (result == ButtonResult.Yes)
         {
-            await _reportStateService.Delete(reportId);
+            await _reportStateService.DeleteState(reportId);
             await LoadSavedReportsList();
             await ShowNotificationAsync($"Relatório '{reportId}' excluído com sucesso!");
         }
