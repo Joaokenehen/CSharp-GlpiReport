@@ -115,10 +115,12 @@ public partial class DashboardViewModel : ViewModelBase
         }
 
         var fimPlantao = diaSelecionado.AddHours(7).AddMinutes(30);   // 07:30 do dia atual
+        var inicioAlmocoPlantao = diaSelecionado.AddHours(11).AddMinutes(30); // 11:30 do dia atual
+        var fimAlmocoPlantao = diaSelecionado.AddHours(13).AddMinutes(30);   // 13:30 do dia atual
         var inicioDiaNormal = fimPlantao;                            // Início do dia de trabalho
         var fimDiaNormal = diaSelecionado.AddHours(18);              // Fim do dia de trabalho
 
-        _log.Info("Filtro", $"Filtrando chamados para o dia {diaSelecionado:dd/MM/yyyy}. Janela Plantão: {inicioPlantao:g} a {fimPlantao:g}.");
+        _log.Info("Filtro", $"Filtrando chamados para o dia {diaSelecionado:dd/MM/yyyy}. Janela Plantão (Noite): {inicioPlantao:g} a {fimPlantao:g}. Janela Plantão (Almoço): {inicioAlmocoPlantao:g} a {fimAlmocoPlantao:g}.");
 
         int chamadosEncontrados = 0;
         int chamadosAbertosNoDia = 0;
@@ -137,8 +139,10 @@ public partial class DashboardViewModel : ViewModelBase
             bool criadoNoDiaNormal = dataCriacao >= inicioDiaNormal && dataCriacao < fimDiaNormal;
 
             // 2. VERIFICAÇÃO DE RELEVÂNCIA (se o chamado pertence ao relatório de hoje)
-            bool isPlantao = (dataSolucao >= inicioPlantao && dataSolucao < fimPlantao) ||
-                             (dataModificacao >= inicioPlantao && dataModificacao < fimPlantao);
+            bool isPlantao = ((dataSolucao >= inicioPlantao && dataSolucao < fimPlantao) ||
+                              (dataModificacao >= inicioPlantao && dataModificacao < fimPlantao)) ||
+                             ((dataSolucao >= inicioAlmocoPlantao && dataSolucao < fimAlmocoPlantao) ||
+                              (dataModificacao >= inicioAlmocoPlantao && dataModificacao < fimAlmocoPlantao));
 
             bool isDiaNormal = (dataCriacao >= inicioDiaNormal && dataCriacao < fimDiaNormal) ||
                                (dataSolucao >= inicioDiaNormal && dataSolucao < fimDiaNormal) ||
@@ -322,6 +326,15 @@ public partial class DashboardViewModel : ViewModelBase
     private void Sair()
     {
         OnLogoutRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private void UseSavedReportName(string? reportFileName)
+    {
+        if (string.IsNullOrWhiteSpace(reportFileName)) return;
+
+        // Remove the .json extension para preencher o campo de texto
+        ReportSaveName = Path.GetFileNameWithoutExtension(reportFileName);
     }
 
     [RelayCommand]

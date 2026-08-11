@@ -106,7 +106,11 @@
                         <!-- User Filter -->
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,20,5">
                             <TextBlock Text="Usuário:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D"/>
-                            <TextBox Text="{Binding UsuarioTi}" Watermark="Ex: joao.gustavo" Width="140" Height="35" CornerRadius="6" Padding="10,6"/>
+                            <TextBox Text="{Binding UsuarioTi}" Watermark="Ex: joao.gustavo" Width="140" Height="35" CornerRadius="6" Padding="10,6">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding BuscarChamadosCommand}"/>
+                                </TextBox.KeyBindings>
+                            </TextBox>
                         </StackPanel>
 
                         <!-- Search Button -->
@@ -134,6 +138,28 @@
                                             <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório Semanal" MinWidth="250"/>
                                             <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch"
                                                     Classes="accent"/>
+
+                                            <!-- Seção de Nomes Recentes -->
+                                            <Panel IsVisible="{Binding SavedReports.Count}">
+                                                <StackPanel>
+                                                    <Separator Margin="0,10"/>
+                                                    <TextBlock Text="Ou clique em um nome recente para usar:" FontSize="12" Foreground="#6C757D" Margin="0,0,0,5"/>
+                                                    <ScrollViewer MaxHeight="150">
+                                                        <ItemsControl ItemsSource="{Binding SavedReports}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Command="{Binding #RootControl.DataContext.UseSavedReportNameCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                            Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="5,3">
+                                                                        <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" Foreground="#0078D4"/>
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </ScrollViewer>
+                                                </StackPanel>
+                                            </Panel>
                                         </StackPanel>
                                     </Flyout>
                                 </Button.Flyout>

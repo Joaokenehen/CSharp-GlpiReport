@@ -31,10 +31,16 @@ public partial class LoginViewModel : ViewModelBase
     private bool _isLoading;
 
     [ObservableProperty]
-    private bool _areTokensVisible;
+    private bool _isUserTokenVisible;
 
     [ObservableProperty]
-    private char? _tokenPasswordChar = '*';
+    private char? _userTokenPasswordChar = '*';
+
+    [ObservableProperty]
+    private bool _isAppTokenVisible;
+
+    [ObservableProperty]
+    private char? _appTokenPasswordChar = '*';
 
     [ObservableProperty]
     private bool _isRememberMe;
@@ -98,9 +104,16 @@ public partial class LoginViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleTokenVisibility()
+    private void ToggleUserTokenVisibility()
     {
-        AreTokensVisible = !AreTokensVisible;
-        TokenPasswordChar = AreTokensVisible ? null : '*';
+        IsUserTokenVisible = !IsUserTokenVisible;
+        UserTokenPasswordChar = IsUserTokenVisible ? null : '*';
+    }
+
+    [RelayCommand]
+    private void ToggleAppTokenVisibility()
+    {
+        IsAppTokenVisible = !IsAppTokenVisible;
+        AppTokenPasswordChar = IsAppTokenVisible ? null : '*';
     }
 }
