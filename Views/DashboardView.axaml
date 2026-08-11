@@ -51,6 +51,15 @@
                             <Button.Flyout>
                                 <MenuFlyout>
                                     <MenuItem Header="Sair" Command="{Binding SairCommand}"/>
+                                    <Separator />
+                                    <MenuItem Header="Relatórios Salvos" ItemsSource="{Binding SavedReports}">
+                                        <MenuItem.ItemTemplate>
+                                            <DataTemplate>
+                                                <!-- O Header é o nome do arquivo, o CommandParameter também -->
+                                                <MenuItem Header="{Binding}" Command="{Binding #RootControl.DataContext.LoadStateCommand}" CommandParameter="{Binding}"/>
+                                            </DataTemplate>
+                                        </MenuItem.ItemTemplate>
+                                    </MenuItem>
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>
@@ -108,6 +117,22 @@
 
                         <!-- Manual Add -->
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,0,5">
+                            <!-- NOVO BOTÃO DE SALVAR -->
+                            <Button Background="Transparent" Padding="8" CornerRadius="6" Cursor="Hand" VerticalAlignment="Center" ToolTip.Tip="Salvar Relatório Atual">
+                                <PathIcon Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"
+                                          Width="20" Height="20" Foreground="#495057"/>
+                                <Button.Flyout>
+                                    <Flyout Placement="Bottom">
+                                        <StackPanel Spacing="10" Margin="10">
+                                            <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
+                                            <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório Semanal" MinWidth="250"/>
+                                            <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch"
+                                                    Classes="accent"/>
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+
                             <Button Content="+ Adicionar" Background="#0D6EFD" Foreground="White" Padding="15,8" CornerRadius="6" FontWeight="SemiBold" Cursor="Hand">
                                 <Button.Flyout>
                                     <MenuFlyout>

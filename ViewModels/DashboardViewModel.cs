@@ -8,31 +8,31 @@ using System.Threading.Tasks;
 using System.Text;
 using System.Net;
 using System.Text.RegularExpressions;
-using System.Windows.Input;
-using Avalonia.Input;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia;
 using Avalonia.Platform.Storage;
 using QuestPDF.Fluent;
-using QuestPDF.Infrastructure;
 using Xceed.Words.NET;
 using System.IO;
 using Xceed.Document.NET;
-using Avalonia.Input.Platform; // Esta é a linha que faltava!
 using RelatorioGLPIApp.Models;
 using RelatorioGLPIApp.Documents;
 using RelatorioGLPIApp.Services;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+using MessageBox.Avalonia.Enums;
+
 
 
 namespace RelatorioGLPIApp.ViewModels;
 
 public partial class DashboardViewModel : ViewModelBase
 {
-    // Armazena os dados da conexão para poder atualizar
     private readonly string _url;
     private readonly string _appToken;
     private readonly string _sessionToken;
     private readonly IChamadoService _chamadoService;
+    private readonly IReportStateService _reportStateService;
 
     private readonly ILogService _log;
     private List<Chamado> _todosOsChamados;
@@ -68,6 +68,12 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private string _buscarChamadosButtonText = "Buscar Chamados";
 
+    [ObservableProperty]
+    private string _reportSaveName = "";
+
+    [ObservableProperty]
+    private ObservableCollection<string> _savedReports = new();
+
     public Action? OnLogoutRequested { get; set; }
     public Action<RelatorioItem>? OnItemAdded { get; set; }
 
@@ -79,11 +85,15 @@ public partial class DashboardViewModel : ViewModelBase
         _appToken = connectionInfo.AppToken;
         _sessionToken = connectionInfo.SessionToken;
         _chamadoService = connectionInfo.ChamadoService;
+        _reportStateService = new ReportStateService();
         _todosOsChamados = connectionInfo.InitialChamados;
 
         Relatorios = new ObservableCollection<RelatorioItem>();
 
         AplicarFiltrosNaLista();
+
+        // Carrega a lista de relatórios salvos
+        _ = LoadSavedReportsList();
     }
 
     private void AplicarFiltrosNaLista()
@@ -312,6 +322,78 @@ public partial class DashboardViewModel : ViewModelBase
     private void Sair()
     {
         OnLogoutRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task SaveState()
+    {
+        if (string.IsNullOrWhiteSpace(ReportSaveName))
+        {
+            await ShowNotificationAsync("Por favor, insira um nome para o relatório.");
+            return;
+        }
+
+        bool shouldSave = true;
+        if (await _reportStateService.ReportExists(ReportSaveName))
+        {
+            var messageBox = MessageBoxManager.GetMessageBoxStandard(
+                "Arquivo Existente",
+                $"Um relatório com o nome {ReportSaveName} já existe.\nDeseja substituí-lo?",
+                ButtonEnum.YesNo,
+                MsBox.Avalonia.Enums.Icon.Warning); // <-- Correção aqui
+
+            var result = await messageBox.ShowAsync();
+            shouldSave = result == ButtonResult.Yes;
+        }
+
+        if (shouldSave)
+        {
+            try
+            {
+                var state = new SavedReportState
+                {
+                    ReportDate = this.DataSelecionada,
+                    TechnicianUsername = this.UsuarioTi,
+                    Items = this.Relatorios.ToList()
+                };
+
+                // O nome do arquivo agora é sanitizado dentro do serviço
+                var sanitizedName = string.Join("_", ReportSaveName.Split(Path.GetInvalidFileNameChars()));
+                var finalFileName = string.IsNullOrWhiteSpace(sanitizedName) ? $"Relatorio_sem_nome_{DateTime.Now:yyyyMMddHHmmss}.json" : $"{sanitizedName}.json";
+
+                await _reportStateService.SaveState(state, finalFileName);
+                await ShowNotificationAsync($"Relatório '{ReportSaveName}' salvo com sucesso!");
+                await LoadSavedReportsList(); // Atualiza a lista no menu
+                ReportSaveName = ""; // Limpa o campo após salvar
+            }
+            catch (Exception ex)
+            {
+                _log.Erro("SaveState", $"Falha ao salvar relatório: {ex.Message}");
+                await ShowNotificationAsync("Erro ao salvar o relatório.");
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadState(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+
+        var state = await _reportStateService.LoadState(reportId);
+        if (state != null)
+        {
+            DataSelecionada = state.ReportDate;
+            UsuarioTi = state.TechnicianUsername;
+
+            Relatorios.Clear();
+            foreach (var item in state.Items)
+            {
+                Relatorios.Add(item);
+            }
+
+            UpdateKpis();
+            await ShowNotificationAsync($"Relatório '{reportId}' carregado!");
+        }
     }
 
     [RelayCommand]
@@ -547,5 +629,13 @@ public partial class DashboardViewModel : ViewModelBase
     {
         TotalItensRelatorio = Relatorios.Count;
         TotalItensSolucionados = Relatorios.Count(r => r.StatusTag == "Solucionado" || r.StatusTag == "Fechado");
+    }
+
+    private async Task LoadSavedReportsList()
+    {
+        var reports = await _reportStateService.GetSavedReportIds();
+        SavedReports.Clear();
+        foreach (var report in reports.OrderByDescending(r => r))
+            SavedReports.Add(report);
     }
 }

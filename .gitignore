@@ -45,3 +45,5 @@ $RECYCLE.BIN/
 *.cache
 *.tmp
 *.bak
+# Ignorar a pasta de instaladores gerados
+Installer/
