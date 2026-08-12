@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.Generic;
 using RelatorioGLPIApp.Models;
+using RelatorioGLPIApp.Services;
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -19,11 +20,30 @@ public partial class MainWindowViewModel : ViewModelBase
         var loginViewModel = new LoginViewModel();
         loginViewModel.AoLogarComSucesso = (connectionInfo) =>
         {
-            PaginaAtual = new DashboardViewModel(connectionInfo)
-            {
-                OnLogoutRequested = ShowLoginView // Agora, ao sair, chamamos este método novamente
-            };
+            ShowDashboardView(connectionInfo);
         };
         PaginaAtual = loginViewModel;
+    }
+
+    private void ShowDashboardView(GlpiConnectionInfo connectionInfo)
+    {
+        var dashboardViewModel = new DashboardViewModel(connectionInfo)
+        {
+            OnLogoutRequested = ShowLoginView
+        };
+
+        dashboardViewModel.OnNavigateToGeneralReportsRequested += () =>
+        {
+            ShowGeneralReportsView(connectionInfo, dashboardViewModel);
+        };
+
+        PaginaAtual = dashboardViewModel;
+    }
+
+    private void ShowGeneralReportsView(GlpiConnectionInfo connectionInfo, DashboardViewModel dashboardViewModel)
+    {
+        var generalReportsViewModel = new GeneralReportsViewModel(connectionInfo, new LogService(), dashboardViewModel);
+        generalReportsViewModel.OnBackToDashboardRequested += () => PaginaAtual = dashboardViewModel;
+        PaginaAtual = generalReportsViewModel;
     }
 }

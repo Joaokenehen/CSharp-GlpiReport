@@ -255,4 +255,14 @@ public class ChamadoService : IChamadoService
             _ => null
         };
     }
+
+    public async Task<List<Chamado>> ObterChamadosParaRelatorioGeralAsync(string urlBase, string appToken, string sessionToken, DateTimeOffset startDate, DateTimeOffset endDate)
+    {
+        _log.Info("API_GERAL", "Iniciando busca completa de todos os chamados (fetchAll=true). O filtro será aplicado localmente.");
+        // Revertendo para a lógica de buscar todos os chamados e deixar o ViewModel filtrar.
+        // Isso é mais lento, mas mais confiável se o filtro da API não estiver funcionando como esperado.
+        var todosOsChamados = await ObterChamadosAsync(urlBase, appToken, sessionToken);
+        _log.Sucesso("API_GERAL", $"{todosOsChamados.Count} chamados baixados do GLPI.");
+        return todosOsChamados;
+    }
 }

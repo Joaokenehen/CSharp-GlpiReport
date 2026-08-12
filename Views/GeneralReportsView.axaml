@@ -1,0 +1,138 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RelatorioGLPIApp.ViewModels"
+             x:Class="RelatorioGLPIApp.Views.GeneralReportsView"
+             x:DataType="vm:GeneralReportsViewModel"
+             x:Name="RootControl"
+             Background="#F3F4F6">
+
+    <UserControl.Styles>
+        <Style Selector="Button.WindowButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#495057"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.WindowButton:pointerover">
+            <Setter Property="Background" Value="#E9ECEF"/>
+        </Style>
+        <Style Selector="Button.CloseButton:pointerover">
+            <Setter Property="Background" Value="#DC3545"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Barra de Título com botão Voltar e Controles de Janela -->
+        <Border Grid.Row="0" Background="White" BoxShadow="0 4 15 0 #0D000000" ZIndex="1">
+            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="40" Name="TitleBar" PointerPressed="TitleBar_PointerPressed" Background="Transparent">
+                <!-- Botão Voltar -->
+                <Button Grid.Column="0" Command="{Binding GoBackCommand}" Background="Transparent" VerticalAlignment="Center" Margin="10,0,0,0">
+                    <PathIcon Data="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" Width="24" Height="24" Foreground="#333"/>
+                </Button>
+
+                <!-- Título -->
+                <TextBlock Grid.Column="1" Text="Relatórios Gerais" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"/>
+
+                <!-- Controles da Janela (idênticos ao Dashboard) -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <Button Classes="WindowButton">
+                        <PathIcon Data="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61.25 1.17-.59 1.69.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"
+                                  Width="16" Height="16"/>
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuItem Header="Sair" Command="{Binding DashboardContext.SairCommand}"/>
+                                <Separator />
+                                <MenuItem Header="Relatórios Salvos" ItemsSource="{Binding DashboardContext.SavedReports}">
+                                    <MenuItem.ItemTemplate>
+                                        <DataTemplate>
+                                            <MenuItem Header="{Binding}">
+                                                <MenuItem Header="Carregar"
+                                                          Command="{Binding #RootControl.DataContext.LoadStateAndGoToDashboardCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                                <MenuItem Header="Excluir"
+                                                          Command="{Binding #RootControl.DataContext.DashboardContext.DeleteSavedReportCommand}"
+                                                          CommandParameter="{Binding}"/>
+                                            </MenuItem>
+                                        </DataTemplate>
+                                    </MenuItem.ItemTemplate>
+                                </MenuItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Border Background="#DEE2E6" Width="1" Margin="0,8" VerticalAlignment="Stretch"/>
+                    <Button Name="MinimizeButton" Content="—" Classes="WindowButton" Click="MinimizeWindow"/>
+                    <Button Name="MaximizeButton" Content="☐" Classes="WindowButton" Click="MaximizeWindow"/>
+                    <Button Name="CloseButton" Content="✕" Classes="WindowButton" Click="CloseWindow"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Conteúdo Principal -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="20" Margin="30">
+
+                <!-- Seleção de Período -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Relatório do Dia" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding EndDate, StringFormat='dd MMMM yyyy'}" FontSize="14" HorizontalAlignment="Center" Foreground="#6C757D" Margin="0,-10,0,10"/>
+
+                        <Button Command="{Binding GenerateReportCommand}"
+                                IsEnabled="{Binding !IsGenerating}"
+                                HorizontalAlignment="Stretch"
+                                Background="#0078D4"
+                                Foreground="White"
+                                Padding="12"
+                                CornerRadius="5"
+                                FontSize="16"
+                                FontWeight="SemiBold">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+                                <PathIcon Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2v-7h2v7zm4 0h-2v-7h2v7z" Width="20" Height="20"/>
+                                <TextBlock Text="Gerar Relatório de Hoje" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- Status e Progresso -->
+                <StackPanel Spacing="5" IsVisible="{Binding IsGenerating}">
+                    <ProgressBar IsIndeterminate="True"/>
+                    <TextBlock Text="{Binding GenerationStatus}" HorizontalAlignment="Center" Foreground="#555"/>
+                </StackPanel>
+                <TextBlock Text="{Binding GenerationStatus}" IsVisible="{Binding !IsGenerating}" HorizontalAlignment="Center" Foreground="#555"/>
+
+                <!-- Resultados das Estatísticas -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding !IsGenerating}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Resultados" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Chamados Abertos Hoje:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TotalTicketsFound}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Chamados Solucionados/Fechados:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TotalSolved}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Green"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Chamados em Horário de Plantão:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalOnDuty}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Orange"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Chamados Pendentes:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TotalPending}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="DarkGoldenrod"/>
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Chamados Novos (não atribuídos):" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TotalNew}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Blue"/>
+
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

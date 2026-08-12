@@ -74,6 +74,7 @@ public partial class DashboardViewModel : ViewModelBase
     private ObservableCollection<string> _savedReports = new();
 
     public Action? OnLogoutRequested { get; set; }
+    public Action? OnNavigateToGeneralReportsRequested { get; set; }
     public Action<RelatorioItem>? OnItemAdded { get; set; }
 
     public DashboardViewModel(GlpiConnectionInfo connectionInfo)
@@ -127,8 +128,6 @@ public partial class DashboardViewModel : ViewModelBase
         var fimAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(13).AddMinutes(30);   // 13:30 do dia atual local
         var inicioDiaNormalLocal = fimPlantaoLocal;                            // Início do dia de trabalho local
         var fimDiaNormalLocal = diaSelecionadoLocal.AddHours(18);              // Fim do dia de trabalho local
-
-        // Agora, converte todas as janelas para UTC para comparação com os dados do GLPI (que serão convertidos para UTC)
         var inicioPlantaoUtc = inicioPlantaoLocal.ToUniversalTime();
         var fimPlantaoUtc = fimPlantaoLocal.ToUniversalTime();
         var inicioAlmocoPlantaoUtc = inicioAlmocoPlantaoLocal.ToUniversalTime();
@@ -390,6 +389,12 @@ public partial class DashboardViewModel : ViewModelBase
         var listaOrdenada = Relatorios.OrderBy(x => ordem.TryGetValue(x.Categoria ?? "", out int peso) ? peso : 99).ToList();
         Relatorios.Clear();
         foreach (var item in listaOrdenada) Relatorios.Add(item);
+    }
+
+    [RelayCommand]
+    private void NavigateToGeneralReports()
+    {
+        OnNavigateToGeneralReportsRequested?.Invoke();
     }
 
     [RelayCommand]
