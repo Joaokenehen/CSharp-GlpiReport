@@ -8,6 +8,8 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
@@ -397,6 +399,58 @@ public partial class GeneralReportsViewModel : ViewModelBase
     {
         if (!string.IsNullOrWhiteSpace(reportFileName))
             ReportSaveName = Path.GetFileNameWithoutExtension(reportFileName);
+    }
+
+    [RelayCommand]
+    private async Task PrintReport()
+    {
+        _log.Info("Imprimir", "Iniciando processo de impressão do relatório geral.");
+
+        try
+        {
+            // 1. Gera o PDF em memória
+            var model = new GeneralReportPdfModel(
+                TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew,
+                MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
+                MatrizStats, AgenciasStats, FiliaisStats);
+            var document = new Documents.GeneralReportPdfDocument(model);
+            byte[] pdfBytes = document.GeneratePdf();
+
+            // 2. Salva o PDF em um arquivo temporário
+            string tempFilePath = Path.Combine(Path.GetTempPath(), $"RelatorioGeral_{Guid.NewGuid()}.pdf");
+            await File.WriteAllBytesAsync(tempFilePath, pdfBytes);
+            _log.Info("Imprimir", $"Relatório salvo temporariamente em: {tempFilePath}");
+
+            // 3. Envia o arquivo para a impressora padrão do sistema (funciona melhor no Windows)
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = tempFilePath,
+                    Verb = "Print",
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    UseShellExecute = true // IMPORTANTE: Usa o shell do SO para interpretar o verbo "Print"
+                }
+            };
+            process.Start();
+            _log.Sucesso("Imprimir", "Arquivo enviado para a fila de impressão.");
+        }
+        catch (Win32Exception winEx) when (winEx.NativeErrorCode == 1155) // ERROR_NO_ASSOCIATION
+        {
+            _log.Erro("Imprimir", $"Falha de associação de arquivo (Código 1155): {winEx.Message}");
+            var box = MessageBoxManager.GetMessageBoxStandard("Associação de Arquivo Faltando",
+                "O Windows não sabe como imprimir arquivos PDF.\n\n" +
+                "Para corrigir, por favor, instale um leitor de PDF (como o Adobe Acrobat Reader) e defina-o como o programa padrão para abrir arquivos .pdf.",
+                ButtonEnum.Ok, Icon.Warning);
+            await box.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            _log.Erro("Imprimir", $"Falha ao enviar para a impressora: {ex.Message}");
+            var box = MessageBoxManager.GetMessageBoxStandard("Erro de Impressão", $"Não foi possível enviar o relatório para a impressora.\nVerifique se você tem um leitor de PDF padrão configurado.\n\nErro: {ex.Message}", ButtonEnum.Ok, Icon.Error);
+            await box.ShowAsync();
+        }
     }
 
     [RelayCommand]
