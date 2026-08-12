@@ -26,6 +26,11 @@
             <Setter Property="Background" Value="#DC3545"/>
             <Setter Property="Foreground" Value="White"/>
         </Style>
+        <Style Selector="Button.ActionButton">
+            <Setter Property="Background" Value="#F8F9FA"/>
+            <Setter Property="BorderBrush" Value="#DEE2E6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto, *">
@@ -49,7 +54,7 @@
                             <MenuFlyout>
                                 <MenuItem Header="Sair" Command="{Binding DashboardContext.SairCommand}"/>
                                 <Separator />
-                                <MenuItem Header="Relatórios Salvos" ItemsSource="{Binding DashboardContext.SavedReports}">
+                                <MenuItem Header="Relatórios do Dia Salvos" ItemsSource="{Binding DashboardContext.SavedReports}">
                                     <MenuItem.ItemTemplate>
                                         <DataTemplate>
                                             <MenuItem Header="{Binding}">
@@ -59,6 +64,16 @@
                                                 <MenuItem Header="Excluir"
                                                           Command="{Binding #RootControl.DataContext.DashboardContext.DeleteSavedReportCommand}"
                                                           CommandParameter="{Binding}"/>
+                                            </MenuItem>
+                                        </DataTemplate>
+                                    </MenuItem.ItemTemplate>
+                                </MenuItem>
+                                <MenuItem Header="Relatórios Gerais Salvos" ItemsSource="{Binding SavedGeneralReports}">
+                                    <MenuItem.ItemTemplate>
+                                        <DataTemplate>
+                                            <MenuItem Header="{Binding}">
+                                                <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.LoadStateCommand}" CommandParameter="{Binding}"/>
+                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DeleteSavedReportCommand}" CommandParameter="{Binding}"/>
                                             </MenuItem>
                                         </DataTemplate>
                                     </MenuItem.ItemTemplate>
@@ -81,23 +96,61 @@
                 <!-- Seleção de Período -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000">
                     <StackPanel Spacing="15">
-                        <TextBlock Text="Relatório do Dia" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{Binding EndDate, StringFormat='dd MMMM yyyy'}" FontSize="14" HorizontalAlignment="Center" Foreground="#6C757D" Margin="0,-10,0,10"/>
+                        <TextBlock Text="Relatório Geral" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <Grid ColumnDefinitions="*,Auto" Grid.ColumnSpan="20">
+                            <!-- Ações Secundárias (Salvar e Exportar) -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
+                                <!-- Botão Salvar (Apenas Ícone) -->
+                                <Button Classes="ActionButton WindowButton" ToolTip.Tip="Salvar Relatório" IsEnabled="{Binding !IsGenerating}">
+                                    <PathIcon Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" Width="20" Height="20"/>
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Spacing="10" Margin="10">
+                                                <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
+                                                <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório Geral Semanal" MinWidth="250"/>
+                                                <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch" Classes="accent"/>
+                                                <Panel IsVisible="{Binding SavedGeneralReports.Count}">
+                                                    <StackPanel>
+                                                        <Separator Margin="0,10"/>
+                                                        <TextBlock Text="Ou clique em um nome recente para usar:" FontSize="12" Foreground="#6C757D" Margin="0,0,0,5"/>
+                                                        <ScrollViewer MaxHeight="150">
+                                                            <ItemsControl ItemsSource="{Binding SavedGeneralReports}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Button Command="{Binding #RootControl.DataContext.UseSavedReportNameCommand}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="5,3">
+                                                                            <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" Foreground="#0078D4"/>
+                                                                        </Button>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </ScrollViewer>
+                                                    </StackPanel>
+                                                </Panel>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
 
-                        <Button Command="{Binding GenerateReportCommand}"
-                                IsEnabled="{Binding !IsGenerating}"
-                                HorizontalAlignment="Stretch"
-                                Background="#0078D4"
-                                Foreground="White"
-                                Padding="12"
-                                CornerRadius="5"
-                                FontSize="16"
-                                FontWeight="SemiBold">
-                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
-                                <PathIcon Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2v-7h2v7zm4 0h-2v-7h2v7z" Width="20" Height="20"/>
-                                <TextBlock Text="Gerar Relatório de Hoje" VerticalAlignment="Center"/>
+                                <!-- Botão Exportar (Apenas Texto) -->
+                                <Button IsEnabled="{Binding !IsGenerating}" Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1" Foreground="#495057" Padding="12,8" CornerRadius="6" FontWeight="SemiBold">
+                                    <TextBlock Text="Exportar"/>
+                                    <Button.Flyout>
+                                        <MenuFlyout>
+                                            <MenuItem Header="Gerar PDF" Command="{Binding ExportarPdfCommand}"/>
+                                            <MenuItem Header="Gerar Word" Command="{Binding ExportarWordCommand}"/>
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
                             </StackPanel>
-                        </Button>
+
+                            <!-- Ação Principal (Gerar Relatório) -->
+                            <Button Grid.Column="1" Command="{Binding GenerateReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#0078D4" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2v-7h2v7zm4 0h-2v-7h2v7z" Width="16" Height="16"/>
+                                    <TextBlock Text="Gerar Relatório" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -112,26 +165,99 @@
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding !IsGenerating}">
                     <StackPanel Spacing="10">
                         <TextBlock Text="Resultados" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto">
+                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto" VerticalAlignment="Center">
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Chamados Abertos Hoje:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Chamados Abertos no Período:" VerticalAlignment="Center"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TotalTicketsFound}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Chamados Solucionados/Fechados:" VerticalAlignment="Center"/>
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TotalSolved}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Green"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Chamados em Horário de Plantão:" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalOnDuty}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Orange"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Chamados em Expediente Normal:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalBusinessHours}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="#1E90FF"/>
 
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Chamados Pendentes:" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TotalPending}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="DarkGoldenrod"/>
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Chamados em Horário de Plantão:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding TotalOnDuty}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Orange"/>
 
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Chamados Novos (não atribuídos):" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TotalNew}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Blue"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Text="Taxa de Resolução (do Período):" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding TaxaResolucaoDia}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="#0078D4"/>
+
+                            <TextBlock Grid.Row="5" Grid.Column="0" Text="Chamados Pendentes (do Período):" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding TotalPending}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="DarkGoldenrod"/>
+
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Chamados Novos (não atribuídos):" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding TotalNew}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Blue"/>
 
                         </Grid>
                     </StackPanel>
                 </Border>
+
+                <!-- Demandas da Matriz -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding MatrizStats.Count}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                            <TextBlock Text="Demandas da Matriz" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding MatrizPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding MatrizStats}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DepartmentStat">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,3">
+                                        <TextBlock Grid.Column="0" Text="{Binding DepartmentName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <Border Grid.Column="1" Background="#E9ECEF" CornerRadius="10" Padding="8,2" MinWidth="30">
+                                            <TextBlock Text="{Binding TicketCount}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Demandas das Agências -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding AgenciasStats.Count}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                            <TextBlock Text="Demandas das Agências" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding AgenciasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding AgenciasStats}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DepartmentStat">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,3">
+                                        <TextBlock Grid.Column="0" Text="{Binding DepartmentName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <Border Grid.Column="1" Background="#E9ECEF" CornerRadius="10" Padding="8,2" MinWidth="30">
+                                            <TextBlock Text="{Binding TicketCount}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Demandas das Filiais -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding FiliaisStats.Count}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                            <TextBlock Text="Demandas das Filiais" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding FiliaisPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding FiliaisStats}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DepartmentStat">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,3">
+                                        <TextBlock Grid.Column="0" Text="{Binding DepartmentName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <Border Grid.Column="1" Background="#E9ECEF" CornerRadius="10" Padding="8,2" MinWidth="30">
+                                            <TextBlock Text="{Binding TicketCount}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -60,7 +60,7 @@
                                 <MenuFlyout>
                                     <MenuItem Header="Sair" Command="{Binding SairCommand}"/>
                                     <Separator />
-                                    <MenuItem Header="Relatórios Salvos" ItemsSource="{Binding SavedReports}">
+                                    <MenuItem Header="Relatórios do Dia Salvos" ItemsSource="{Binding SavedReports}">
                                         <MenuItem.ItemTemplate>
                                             <DataTemplate>
                                                 <!-- O Header é o nome do arquivo, o CommandParameter também -->

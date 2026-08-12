@@ -2,11 +2,23 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using RelatorioGLPIApp.Services;
 using System;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform.Storage;
+using QuestPDF.Fluent;
+using Xceed.Words.NET;
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+using Xceed.Document.NET;
+using System.IO;
 using RelatorioGLPIApp.Models;
+using MessageBox.Avalonia.Enums;
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -15,6 +27,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
     private readonly ILogService _log;
     private readonly GlpiConnectionInfo _connectionInfo;
     private readonly IChamadoService _chamadoService;
+    private readonly IGeneralReportStateService _generalReportStateService;
 
     // Propriedade para acessar os comandos do Dashboard (Sair, Relatórios Salvos)
     public DashboardViewModel DashboardContext { get; }
@@ -37,11 +50,39 @@ public partial class GeneralReportsViewModel : ViewModelBase
     [ObservableProperty]
     private int _totalSolved;
     [ObservableProperty]
+    private string _taxaResolucaoDia = "N/A";
+    [ObservableProperty]
+    private int _totalBusinessHours;
+    [ObservableProperty]
     private int _totalOnDuty;
     [ObservableProperty]
     private int _totalPending;
     [ObservableProperty]
     private int _totalNew;
+
+    [ObservableProperty]
+    private string _matrizPercentage = "";
+
+    [ObservableProperty]
+    private string _agenciasPercentage = "";
+
+    [ObservableProperty]
+    private string _filiaisPercentage = "";
+
+    [ObservableProperty]
+    private string _reportSaveName = "";
+
+    [ObservableProperty]
+    private ObservableCollection<string> _savedGeneralReports = new();
+
+    [ObservableProperty]
+    private ObservableCollection<DepartmentStat> _matrizStats = new();
+
+    [ObservableProperty]
+    private ObservableCollection<DepartmentStat> _agenciasStats = new();
+
+    [ObservableProperty]
+    private ObservableCollection<DepartmentStat> _filiaisStats = new();
 
     public Action? OnBackToDashboardRequested { get; set; }
 
@@ -51,6 +92,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
         DashboardContext = dashboardContext;
         _connectionInfo = connectionInfo;
         _chamadoService = connectionInfo.ChamadoService;
+        _generalReportStateService = new GeneralReportStateService();
+
+        _ = LoadSavedReportsList();
     }
 
     [RelayCommand]
@@ -63,9 +107,17 @@ public partial class GeneralReportsViewModel : ViewModelBase
         // Reseta as estatísticas
         TotalTicketsFound = 0;
         TotalSolved = 0;
+        TotalBusinessHours = 0;
         TotalOnDuty = 0;
         TotalPending = 0;
         TotalNew = 0;
+        MatrizStats.Clear();
+        MatrizPercentage = "";
+        AgenciasStats.Clear();
+        AgenciasPercentage = "";
+        FiliaisStats.Clear();
+        FiliaisPercentage = "";
+        ReportSaveName = "";
 
         try
         {
@@ -79,7 +131,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             if (allTickets.Any())
             {
                 ProcessTickets(allTickets);
-                GenerationStatus = $"Relatório gerado com sucesso. {TotalTicketsFound} chamados abertos hoje encontrados.";
+                GenerationStatus = $"Relatório gerado com sucesso. {TotalTicketsFound} chamados encontrados no período.";
             }
             else
             {
@@ -124,16 +176,31 @@ public partial class GeneralReportsViewModel : ViewModelBase
         int solvedCount = 0;
         int pendingCount = 0;
         int newCount = 0;
+        int resolvedTodayCount = 0;
 
         foreach (var ticket in ticketsNoPeriodo)
         {
             // Contagem de status
-            if (ticket.Status == 5 || ticket.Status == 6) solvedCount++; // Solucionado ou Fechado
+            if (ticket.Status == 5 || ticket.Status == 6) // Solucionado ou Fechado (criado no período)
+            {
+                solvedCount++;
+            }
             else if (ticket.Status == 4)
             {
                 pendingCount++; // Conta apenas os pendentes que foram abertos hoje.
             }
-            else if (ticket.Status == 1) newCount++; // Novo
+            else if (ticket.Status == 1)
+            {
+                newCount++; // Novo
+            }
+
+            // Contagem para Taxa de Resolução: Chamados abertos hoje E resolvidos/fechados hoje
+            if ((ticket.Status == 5 || ticket.Status == 6) &&
+                ((DateTime.TryParse(ticket.DataSolucao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataSolucaoLocal) && dataSolucaoLocal.Date == DateTime.Today) ||
+                 (DateTime.TryParse(ticket.DataFechamento, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataFechamentoLocal) && dataFechamentoLocal.Date == DateTime.Today)))
+            {
+                resolvedTodayCount++;
+            }
 
             // Contagem de chamados de plantão (lógica simplificada baseada na data de criação)
             if (DateTime.TryParse(ticket.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacaoLocal))
@@ -153,16 +220,183 @@ public partial class GeneralReportsViewModel : ViewModelBase
         }
 
         TotalSolved = solvedCount;
+        TotalBusinessHours = TotalTicketsFound - onDutyCount; // Chamados no período - chamados de plantão no período
         TotalOnDuty = onDutyCount;
         TotalPending = pendingCount;
         TotalNew = newCount;
 
+        // Calcula a Taxa de Resolução
+        if (TotalTicketsFound > 0)
+        {
+            TaxaResolucaoDia = $"{(double)resolvedTodayCount / TotalTicketsFound:P0}";
+        }
+        else
+        {
+            TaxaResolucaoDia = "N/A";
+        }
+
         _log.Info("RelatorioGeral", "Estatísticas calculadas:");
         _log.Info("RelatorioGeral", $"  - Abertos Hoje: {TotalTicketsFound}");
-        _log.Info("RelatorioGeral", $"  - Solucionados: {TotalSolved}");
+        _log.Info("RelatorioGeral", $"  - Solucionados/Fechados: {TotalSolved}");
+        _log.Info("RelatorioGeral", $"  - Em Expediente Normal: {TotalBusinessHours}");
+        _log.Info("RelatorioGeral", $"  - Taxa de Resolução: {TaxaResolucaoDia}");
         _log.Info("RelatorioGeral", $"  - Em Plantão: {TotalOnDuty}");
         _log.Info("RelatorioGeral", $"  - Pendentes (do dia): {TotalPending}");
         _log.Info("RelatorioGeral", $"  - Novos: {TotalNew}");
+
+        // 3. CÁLCULO POR SETOR
+        _log.Info("RelatorioGeral", "Calculando estatísticas por setor...");
+
+        var ticketsMatriz = new List<Chamado>();
+        var ticketsAgencias = new List<Chamado>();
+        var ticketsFiliais = new List<Chamado>();
+
+        foreach (var ticket in ticketsNoPeriodo)
+        {
+            string entidade = WebUtility.HtmlDecode(ticket.Entidade ?? "Matriz");
+            if (entidade.Contains("Agências", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias", StringComparison.OrdinalIgnoreCase))
+            {
+                ticketsAgencias.Add(ticket);
+            }
+            else if (entidade.Contains("Filiais", StringComparison.OrdinalIgnoreCase))
+            {
+                ticketsFiliais.Add(ticket);
+            }
+            else
+            {
+                ticketsMatriz.Add(ticket);
+            }
+        }
+
+        // Função para processar um grupo de tickets e popular a coleção de estatísticas
+        void ProcessGroup(List<Chamado> groupTickets, ObservableCollection<DepartmentStat> collection)
+        {
+            var stats = groupTickets
+                .Select(t => WebUtility.HtmlDecode(t.Entidade ?? "Matriz").Split('>').Last().Trim())
+                .GroupBy(setor => setor)
+                .Select(g => new DepartmentStat(g.Key, g.Count()))
+                .OrderByDescending(s => s.TicketCount)
+                .ToList();
+
+            foreach (var stat in stats) collection.Add(stat);
+        }
+
+        ProcessGroup(ticketsMatriz, MatrizStats);
+        ProcessGroup(ticketsAgencias, AgenciasStats);
+        ProcessGroup(ticketsFiliais, FiliaisStats);
+
+        if (TotalTicketsFound > 0)
+        {
+            double matrizCount = MatrizStats.Sum(s => s.TicketCount);
+            double agenciasCount = AgenciasStats.Sum(s => s.TicketCount);
+            double filiaisCount = FiliaisStats.Sum(s => s.TicketCount);
+
+            MatrizPercentage = $"({(matrizCount / TotalTicketsFound):P0})";
+            AgenciasPercentage = $"({(agenciasCount / TotalTicketsFound):P0})";
+            FiliaisPercentage = $"({(filiaisCount / TotalTicketsFound):P0})";
+        }
+
+        _log.Info("RelatorioGeral", $"Matriz: {MatrizStats.Count} setores {MatrizPercentage}. " +
+                                   $"Agências: {AgenciasStats.Count} setores {AgenciasPercentage}. " +
+                                   $"Filiais: {FiliaisStats.Count} setores {FiliaisPercentage}.");
+    }
+
+    [RelayCommand]
+    private async Task SaveState()
+    {
+        if (string.IsNullOrWhiteSpace(ReportSaveName))
+        {
+            // Poderíamos mostrar uma notificação aqui se quiséssemos.
+            return;
+        }
+
+        bool shouldSave = true;
+        if (await _generalReportStateService.ReportExists(ReportSaveName))
+        {
+            var result = await MessageBoxManager.GetMessageBoxStandard(
+                "Arquivo Existente",
+                $"Um relatório geral com o nome '{ReportSaveName}' já existe.\nDeseja substituí-lo?",
+                ButtonEnum.YesNo, Icon.Warning).ShowAsync();
+            shouldSave = result == ButtonResult.Yes;
+        }
+
+        if (shouldSave)
+        {
+            var state = new SavedGeneralReportState
+            {
+                TotalTicketsFound = this.TotalTicketsFound,
+                TotalSolved = this.TotalSolved,
+                TaxaResolucaoDia = this.TaxaResolucaoDia,
+                TotalBusinessHours = this.TotalBusinessHours,
+                TotalOnDuty = this.TotalOnDuty,
+                TotalPending = this.TotalPending,
+                TotalNew = this.TotalNew,
+                MatrizPercentage = this.MatrizPercentage,
+                AgenciasPercentage = this.AgenciasPercentage,
+                FiliaisPercentage = this.FiliaisPercentage,
+                MatrizStats = this.MatrizStats.ToList(),
+                AgenciasStats = this.AgenciasStats.ToList(),
+                FiliaisStats = this.FiliaisStats.ToList()
+            };
+
+            await _generalReportStateService.SaveState(state, ReportSaveName);
+            await LoadSavedReportsList();
+            ReportSaveName = "";
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadState(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+
+        var state = await _generalReportStateService.LoadState(reportId);
+        if (state != null)
+        {
+            TotalTicketsFound = state.TotalTicketsFound;
+            TotalSolved = state.TotalSolved;
+            TaxaResolucaoDia = state.TaxaResolucaoDia;
+            TotalBusinessHours = state.TotalBusinessHours;
+            TotalOnDuty = state.TotalOnDuty;
+            TotalPending = state.TotalPending;
+            TotalNew = state.TotalNew;
+            MatrizPercentage = state.MatrizPercentage;
+            AgenciasPercentage = state.AgenciasPercentage;
+            FiliaisPercentage = state.FiliaisPercentage;
+
+            MatrizStats.Clear();
+            foreach (var item in state.MatrizStats) MatrizStats.Add(item);
+            AgenciasStats.Clear();
+            foreach (var item in state.AgenciasStats) AgenciasStats.Add(item);
+            FiliaisStats.Clear();
+            foreach (var item in state.FiliaisStats) FiliaisStats.Add(item);
+
+            GenerationStatus = $"Relatório '{Path.GetFileNameWithoutExtension(reportId)}' carregado.";
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteSavedReport(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+
+        var result = await MessageBoxManager.GetMessageBoxStandard(
+            "Excluir Relatório Geral",
+            $"Tem certeza que deseja excluir o relatório '{reportId}'?",
+            ButtonEnum.YesNo, Icon.Warning).ShowAsync();
+
+        if (result == ButtonResult.Yes)
+        {
+            await _generalReportStateService.DeleteState(reportId);
+            await LoadSavedReportsList();
+        }
+    }
+
+    [RelayCommand]
+    private void UseSavedReportName(string? reportFileName)
+    {
+        if (!string.IsNullOrWhiteSpace(reportFileName))
+            ReportSaveName = Path.GetFileNameWithoutExtension(reportFileName);
     }
 
     [RelayCommand]
@@ -181,4 +415,137 @@ public partial class GeneralReportsViewModel : ViewModelBase
     {
         OnBackToDashboardRequested?.Invoke();
     }
+
+    [RelayCommand]
+    private async Task ExportarPdf()
+    {
+        var topLevel = GetTopLevel();
+        if (topLevel == null)
+        {
+            _log.Erro("Exportar", "Não foi possível obter a janela principal para abrir o diálogo de salvamento.");
+            return;
+        }
+
+        var suggestedFileName = $"Relatorio_Geral_{DateTime.Now:yyyy_MM_dd}.pdf";
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Salvar Relatório Geral em PDF",
+            SuggestedFileName = suggestedFileName,
+            FileTypeChoices = new[] { new FilePickerFileType("Arquivos PDF") { Patterns = new[] { "*.pdf" } } }
+        });
+
+        if (file is not null)
+        {
+            try
+            {
+                await using var stream = await file.OpenWriteAsync();
+                var model = new GeneralReportPdfModel(
+                    TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew,
+                    MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
+                    MatrizStats, AgenciasStats, FiliaisStats);
+                var document = new Documents.GeneralReportPdfDocument(model);
+                document.GeneratePdf(stream);
+                _log.Sucesso("Exportar", $"Relatório Geral salvo com sucesso em: {file.Name}");
+            }
+            catch (Exception ex)
+            {
+                _log.Erro("Exportar PDF", $"Ocorreu um erro ao gerar o PDF: {ex.Message}");
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task ExportarWord()
+    {
+        var topLevel = GetTopLevel();
+        if (topLevel == null)
+        {
+            _log.Erro("Exportar", "Não foi possível obter a janela principal para abrir o diálogo de salvamento.");
+            return;
+        }
+
+        var suggestedFileName = $"Relatorio_Geral_{DateTime.Now:yyyy_MM_dd}.docx";
+
+        var file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Salvar Relatório Geral em Word",
+            SuggestedFileName = suggestedFileName,
+            FileTypeChoices = new[] { new FilePickerFileType("Documentos do Word") { Patterns = new[] { "*.docx" } } }
+        });
+
+        if (file is not null)
+        {
+            try
+            {
+                await using var stream = await file.OpenWriteAsync();
+                using (var document = DocX.Create(stream))
+                {
+                    GerarConteudoWord(document);
+                    document.Save();
+                }
+                _log.Sucesso("Exportar", $"Relatório Geral salvo com sucesso em: {file.Name}");
+            }
+            catch (Exception ex)
+            {
+                _log.Erro("Exportar Word", $"Ocorreu um erro ao gerar o documento Word: {ex.Message}");
+            }
+        }
+    }
+
+    private void GerarConteudoWord(DocX document)
+    {
+        document.InsertParagraph("Relatório Geral de Chamados").Bold().FontSize(20).Alignment = Alignment.center;
+        document.InsertParagraph($"Dados referentes ao dia: {DateTime.Now:dd/MM/yyyy}").FontSize(12).Alignment = Alignment.center;
+        document.InsertParagraph();
+
+        document.InsertParagraph("Resumo do Período").Bold().FontSize(14);
+        var statsTable = document.AddTable(7, 2);
+        statsTable.Design = TableDesign.TableGrid;
+        statsTable.AutoFit = AutoFit.Contents;
+        statsTable.Rows[0].Cells[0].Paragraphs.First().Append("Chamados Abertos no Período:").Append(TotalTicketsFound.ToString()).Bold();
+        statsTable.Rows[1].Cells[0].Paragraphs.First().Append("Chamados Solucionados/Fechados:").Append(TotalSolved.ToString()).Bold();
+        statsTable.Rows[2].Cells[0].Paragraphs.First().Append("Chamados em Expediente Normal:").Append(TotalBusinessHours.ToString()).Bold();
+        statsTable.Rows[3].Cells[0].Paragraphs.First().Append("Chamados em Horário de Plantão:").Append(TotalOnDuty.ToString()).Bold();
+        statsTable.Rows[4].Cells[0].Paragraphs.First().Append("Taxa de Resolução:").Append(TaxaResolucaoDia).Bold();
+        statsTable.Rows[5].Cells[0].Paragraphs.First().Append("Chamados Pendentes:").Append(TotalPending.ToString()).Bold();
+        statsTable.Rows[6].Cells[0].Paragraphs.First().Append("Chamados Novos:").Append(TotalNew.ToString()).Bold();
+        document.InsertTable(statsTable);
+        document.InsertParagraph();
+
+        void CreateDepartmentTable(string title, string percentage, ICollection<DepartmentStat> stats)
+        {
+            if (!stats.Any()) return;
+            document.InsertParagraph($"{title} {percentage}").Bold().FontSize(14);
+            var table = document.AddTable(stats.Count + 1, 2);
+            table.Design = TableDesign.TableGrid;
+            table.Rows[0].Cells[0].Paragraphs.First().Append("Setor").Bold();
+            table.Rows[0].Cells[1].Paragraphs.First().Append("Chamados").Bold();
+            int rowIndex = 1;
+            foreach (var stat in stats) { table.Rows[rowIndex].Cells[0].Paragraphs.First().Append(stat.DepartmentName); table.Rows[rowIndex++].Cells[1].Paragraphs.First().Append(stat.TicketCount.ToString()); }
+            document.InsertTable(table);
+            document.InsertParagraph();
+        }
+
+        CreateDepartmentTable("Demandas da Matriz", MatrizPercentage, MatrizStats);
+        CreateDepartmentTable("Demandas das Agências", AgenciasPercentage, AgenciasStats);
+        CreateDepartmentTable("Demandas das Filiais", FiliaisPercentage, FiliaisStats);
+    }
+
+    private Avalonia.Controls.TopLevel? GetTopLevel()
+    {
+        return Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow
+            : null;
+    }
+
+    private async Task LoadSavedReportsList()
+    {
+        var reports = await _generalReportStateService.GetSavedReportIds();
+        SavedGeneralReports.Clear();
+        foreach (var report in reports.OrderByDescending(r => r))
+            SavedGeneralReports.Add(report);
+    }
 }
+
+public record DepartmentStat(string DepartmentName, int TicketCount);
