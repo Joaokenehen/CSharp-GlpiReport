@@ -10,6 +10,10 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private ViewModelBase _paginaAtual = null!;
 
+    // Cache para os ViewModels principais para manter o estado durante a navegação.
+    private DashboardViewModel? _dashboardViewModel;
+    private GeneralReportsViewModel? _generalReportsViewModel;
+
     public MainWindowViewModel()
     {
         ShowLoginView();
@@ -17,6 +21,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void ShowLoginView()
     {
+        // Limpa os ViewModels em cache ao fazer logout ou iniciar, para garantir um estado limpo.
+        _dashboardViewModel = null;
+        _generalReportsViewModel = null;
+
         var loginViewModel = new LoginViewModel();
         loginViewModel.AoLogarComSucesso = (connectionInfo) =>
         {
@@ -27,23 +35,31 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void ShowDashboardView(GlpiConnectionInfo connectionInfo)
     {
-        var dashboardViewModel = new DashboardViewModel(connectionInfo)
+        // Cria o DashboardViewModel apenas uma vez e o reutiliza.
+        if (_dashboardViewModel == null)
         {
-            OnLogoutRequested = ShowLoginView
-        };
+            _dashboardViewModel = new DashboardViewModel(connectionInfo)
+            {
+                OnLogoutRequested = ShowLoginView
+            };
 
-        dashboardViewModel.OnNavigateToGeneralReportsRequested += () =>
-        {
-            ShowGeneralReportsView(connectionInfo, dashboardViewModel);
-        };
+            _dashboardViewModel.OnNavigateToGeneralReportsRequested += () =>
+            {
+                ShowGeneralReportsView(connectionInfo, _dashboardViewModel);
+            };
+        }
 
-        PaginaAtual = dashboardViewModel;
+        PaginaAtual = _dashboardViewModel;
     }
 
     private void ShowGeneralReportsView(GlpiConnectionInfo connectionInfo, DashboardViewModel dashboardViewModel)
     {
-        var generalReportsViewModel = new GeneralReportsViewModel(connectionInfo, new LogService(), dashboardViewModel);
-        generalReportsViewModel.OnBackToDashboardRequested += () => PaginaAtual = dashboardViewModel;
-        PaginaAtual = generalReportsViewModel;
+        // Cria o GeneralReportsViewModel apenas uma vez e o reutiliza.
+        if (_generalReportsViewModel == null)
+        {
+            _generalReportsViewModel = new GeneralReportsViewModel(connectionInfo, new LogService(), dashboardViewModel);
+            _generalReportsViewModel.OnBackToDashboardRequested += () => PaginaAtual = dashboardViewModel;
+        }
+        PaginaAtual = _generalReportsViewModel;
     }
 }

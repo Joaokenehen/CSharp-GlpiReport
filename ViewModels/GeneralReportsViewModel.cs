@@ -117,7 +117,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         _log.Info("RelatorioGeral", $"{ticketsNoPeriodo.Count} chamados encontrados criados hoje.");
 
-        // 2. PROCESSAMENTO: Calcula as estatísticas a partir da lista já filtrada.
+        // 2. PROCESSAMENTO: Calcula as estatísticas a partir da lista já filtrada (chamados de HOJE).
         TotalTicketsFound = ticketsNoPeriodo.Count;
 
         int onDutyCount = 0;
@@ -129,7 +129,10 @@ public partial class GeneralReportsViewModel : ViewModelBase
         {
             // Contagem de status
             if (ticket.Status == 5 || ticket.Status == 6) solvedCount++; // Solucionado ou Fechado
-            else if (ticket.Status == 4) pendingCount++; // Pendente
+            else if (ticket.Status == 4)
+            {
+                pendingCount++; // Conta apenas os pendentes que foram abertos hoje.
+            }
             else if (ticket.Status == 1) newCount++; // Novo
 
             // Contagem de chamados de plantão (lógica simplificada baseada na data de criação)
@@ -158,7 +161,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         _log.Info("RelatorioGeral", $"  - Abertos Hoje: {TotalTicketsFound}");
         _log.Info("RelatorioGeral", $"  - Solucionados: {TotalSolved}");
         _log.Info("RelatorioGeral", $"  - Em Plantão: {TotalOnDuty}");
-        _log.Info("RelatorioGeral", $"  - Pendentes: {TotalPending}");
+        _log.Info("RelatorioGeral", $"  - Pendentes (do dia): {TotalPending}");
         _log.Info("RelatorioGeral", $"  - Novos: {TotalNew}");
     }
 
