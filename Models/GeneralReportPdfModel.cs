@@ -18,5 +18,6 @@ public record GeneralReportPdfModel(
     string FiliaisPercentage,
     ICollection<DepartmentStat> MatrizStats,
     ICollection<DepartmentStat> AgenciasStats,
-    ICollection<DepartmentStat> FiliaisStats
+    ICollection<DepartmentStat> FiliaisStats,
+    ICollection<TechnicianStat> TechnicianStats
 );

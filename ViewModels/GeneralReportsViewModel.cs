@@ -96,6 +96,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
     public Action? OnBackToDashboardRequested { get; set; }
 
+    [ObservableProperty]
+    private ObservableCollection<TechnicianStat> _technicianStats = new();
+
     public GeneralReportsViewModel(GlpiConnectionInfo connectionInfo, ILogService logService, DashboardViewModel dashboardContext)
     {
         _log = logService;
@@ -129,6 +132,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         FiliaisPercentage = "";
         AverageTicketsPerDay = "N/A";
         IsAverageVisible = false;
+        TechnicianStats.Clear();
         AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
         ReportSaveName = "";
@@ -238,62 +242,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 newCount++; // Novo
             }
 
-            bool isTicketOnDuty = false;
-            if (filterForToday)
-            {
-                // LÓGICA ROBUSTA PARA O RELATÓRIO DO DIA (igual ao Dashboard)
-                var dataCriacao = ParseDate(ticket.DataCriacao);
-                var dataSolucao = ParseDate(ticket.DataSolucao);
-                var dataModificacao = ParseDate(ticket.DataModificacao);
-                var dataAtribuicao = ParseDate(ticket.DataAtribuicao);
-
-                var diaSelecionadoLocal = DateTime.Today;
-                DateTimeOffset inicioPlantaoLocal;
-                if (diaSelecionadoLocal.DayOfWeek == DayOfWeek.Monday)
-                    inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-3).AddHours(18);
-                else
-                    inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-1).AddHours(18);
-
-                var fimPlantaoLocal = diaSelecionadoLocal.AddHours(7).AddMinutes(30);
-                var inicioAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(11).AddMinutes(30);
-                var fimAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(13).AddMinutes(30);
-
-                var inicioPlantaoUtc = inicioPlantaoLocal.ToUniversalTime();
-                var fimPlantaoUtc = fimPlantaoLocal.ToUniversalTime();
-                var inicioAlmocoPlantaoUtc = inicioAlmocoPlantaoLocal.ToUniversalTime();
-                var fimAlmocoPlantaoUtc = fimAlmocoPlantaoLocal.ToUniversalTime();
-
-                bool IsInOnDutyWindow(DateTime? date)
-                {
-                    if (!date.HasValue) return false;
-                    return (date.Value >= inicioPlantaoUtc && date.Value < fimPlantaoUtc) ||
-                           (date.Value >= inicioAlmocoPlantaoUtc && date.Value < fimAlmocoPlantaoUtc);
-                }
-
-                if (IsInOnDutyWindow(dataCriacao) || IsInOnDutyWindow(dataSolucao) || IsInOnDutyWindow(dataModificacao) || IsInOnDutyWindow(dataAtribuicao))
-                {
-                    isTicketOnDuty = true;
-                }
-            }
-            else
-            {
-                // LÓGICA SIMPLIFICADA PARA O RELATÓRIO COMPLETO (baseado na data de criação)
-                if (DateTime.TryParse(ticket.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacaoLocal))
-                {
-                    var time = dataCriacaoLocal.TimeOfDay;
-                    var dayOfWeek = dataCriacaoLocal.DayOfWeek;
-
-                    bool isNightShift = time >= TimeSpan.FromHours(18) || time < TimeSpan.FromHours(7.5);
-                    bool isLunchShift = time >= TimeSpan.FromHours(11.5) && time < TimeSpan.FromHours(13.5);
-                    bool isWeekend = dayOfWeek == DayOfWeek.Saturday || dayOfWeek == DayOfWeek.Sunday;
-
-                    if (isNightShift || isLunchShift || isWeekend)
-                    {
-                        isTicketOnDuty = true;
-                    }
-                }
-            }
-
+            bool isTicketOnDuty = IsTicketOnDuty(ticket, filterForToday);
             if (isTicketOnDuty)
             {
                 onDutyCount++;
@@ -377,6 +326,52 @@ public partial class GeneralReportsViewModel : ViewModelBase
         _log.Info("RelatorioGeral", $"  - Tempo Médio de Resolução: {AverageSolveTime}");
         _log.Info("RelatorioGeral", $"  - Média Diária: {AverageTicketsPerDay}");
         _log.Info("RelatorioGeral", $"  - Novos: {TotalNew}");
+
+        // 4. CÁLCULO POR TÉCNICO
+        _log.Info("RelatorioGeral", "Calculando produtividade por técnico...");
+        TechnicianStats.Clear();
+
+        var allTechnicians = ticketsToProcess
+            .Where(t => !string.IsNullOrWhiteSpace(t.TecnicoAtribuido))
+            .SelectMany(t => t.TecnicoAtribuido!.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(n => n.Trim()))
+            .Distinct()
+            .OrderBy(name => name)
+            .ToList();
+
+        foreach (var techName in allTechnicians)
+        {
+            var techTickets = ticketsToProcess
+                .Where(t => t.TecnicoAtribuido != null && t.TecnicoAtribuido.Contains(techName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var solvedByTech = techTickets.Where(t => t.Status == 5 || t.Status == 6).ToList();
+            int techSolvedCount = solvedByTech.Count;
+
+            string resolutionRate = (TotalTicketsFound > 0) ? $"{(double)techSolvedCount / TotalTicketsFound:P0}" : "0%";
+
+            int onDutySolvedCount = solvedByTech.Count(t => IsTicketOnDuty(t, filterForToday));
+
+            var techSolveDurations = solvedByTech
+                .Where(t => t.TempoParaSolucao.HasValue && t.TempoParaSolucao > 0)
+                .Select(t => t.TempoParaSolucao!.Value)
+                .ToList();
+
+            string avgSolveTime = "N/A";
+            if (techSolveDurations.Any())
+            {
+                var averageSeconds = techSolveDurations.Average();
+                avgSolveTime = FormatTimeSpan(TimeSpan.FromSeconds(averageSeconds));
+            }
+
+            TechnicianStats.Add(new TechnicianStat(
+                System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' ')), // Nome do técnico formatado
+                techSolvedCount,
+                resolutionRate,
+                onDutySolvedCount,
+                avgSolveTime
+            ));
+        }
+        _log.Info("RelatorioGeral", $"{TechnicianStats.Count} técnicos encontrados e analisados.");
 
         // 3. CÁLCULO POR SETOR
         _log.Info("RelatorioGeral", "Calculando estatísticas por setor...");
@@ -464,6 +459,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         FiliaisPercentage = "";
         AverageTicketsPerDay = "N/A";
         IsAverageVisible = false;
+        TechnicianStats.Clear();
         AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
         ReportSaveName = "";
@@ -514,6 +510,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 TotalSolved = this.TotalSolved,
                 TaxaResolucaoDia = this.TaxaResolucaoDia,
                 TotalBusinessHours = this.TotalBusinessHours,
+                TechnicianStats = this.TechnicianStats.ToList(),
                 AverageSolveTime = this.AverageSolveTime,
                 AverageTicketsPerDay = this.AverageTicketsPerDay,
                 TotalOnDuty = this.TotalOnDuty,
@@ -545,6 +542,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
             TotalSolved = state.TotalSolved;
             TaxaResolucaoDia = state.TaxaResolucaoDia;
             TotalBusinessHours = state.TotalBusinessHours;
+            TechnicianStats.Clear();
+            foreach (var item in state.TechnicianStats) TechnicianStats.Add(item);
             AverageSolveTime = state.AverageSolveTime;
             AverageTicketsPerDay = state.AverageTicketsPerDay;
             TotalOnDuty = state.TotalOnDuty;
@@ -604,7 +603,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             var model = new GeneralReportPdfModel(
                 TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay, AverageSolveTime,
                 MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
-                MatrizStats, AgenciasStats, FiliaisStats);
+                MatrizStats, AgenciasStats, FiliaisStats, TechnicianStats);
             var document = new Documents.GeneralReportPdfDocument(model);
             byte[] pdfBytes = document.GeneratePdf();
 
@@ -689,7 +688,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 var model = new GeneralReportPdfModel(
                     TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay, AverageSolveTime,
                     MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
-                    MatrizStats, AgenciasStats, FiliaisStats);
+                    MatrizStats, AgenciasStats, FiliaisStats,
+                    TechnicianStats);
                 var document = new Documents.GeneralReportPdfDocument(model);
                 document.GeneratePdf(stream);
                 _log.Sucesso("Exportar", $"Relatório Geral salvo com sucesso em: {file.Name}");
@@ -797,6 +797,22 @@ public partial class GeneralReportsViewModel : ViewModelBase
         CreateDepartmentTable("Demandas da Matriz", MatrizPercentage, MatrizStats);
         CreateDepartmentTable("Demandas das Agências", AgenciasPercentage, AgenciasStats);
         CreateDepartmentTable("Demandas das Filiais", FiliaisPercentage, FiliaisStats);
+
+        if (TechnicianStats.Any())
+        {
+            document.InsertParagraph("Produtividade por Técnico").Bold().FontSize(14);
+            var techTable = document.AddTable(TechnicianStats.Count + 1, 5);
+            techTable.Design = TableDesign.TableGrid;
+            techTable.Rows[0].Cells[0].Paragraphs.First().Append("Técnico").Bold();
+            techTable.Rows[0].Cells[1].Paragraphs.First().Append("Solucionados").Bold();
+            techTable.Rows[0].Cells[2].Paragraphs.First().Append("Taxa Res.").Bold();
+            techTable.Rows[0].Cells[3].Paragraphs.First().Append("Plantão").Bold();
+            techTable.Rows[0].Cells[4].Paragraphs.First().Append("T. Médio").Bold();
+            int techRowIndex = 1;
+            foreach (var stat in TechnicianStats) { techTable.Rows[techRowIndex].Cells[0].Paragraphs.First().Append(stat.TechnicianName); techTable.Rows[techRowIndex].Cells[1].Paragraphs.First().Append(stat.SolvedCount.ToString()); techTable.Rows[techRowIndex].Cells[2].Paragraphs.First().Append(stat.ResolutionRate); techTable.Rows[techRowIndex].Cells[3].Paragraphs.First().Append(stat.OnDutySolvedCount.ToString()); techTable.Rows[techRowIndex++].Cells[4].Paragraphs.First().Append(stat.AverageSolveTime); }
+            document.InsertTable(techTable);
+            document.InsertParagraph();
+        }
     }
 
     private Avalonia.Controls.TopLevel? GetTopLevel()
@@ -825,6 +841,67 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         return string.Join(" ", parts);
     }
+
+    private bool IsTicketOnDuty(Chamado ticket, bool filterForToday)
+    {
+        // Helper para parse de data, para ser usado na lógica de plantão
+        DateTime? ParseDate(string? dateStr)
+        {
+            if (string.IsNullOrWhiteSpace(dateStr)) return null;
+            if (DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt)) return dt.ToUniversalTime();
+            return null;
+        }
+
+        if (filterForToday)
+        {
+            var dataCriacao = ParseDate(ticket.DataCriacao);
+            var dataSolucao = ParseDate(ticket.DataSolucao);
+            var dataModificacao = ParseDate(ticket.DataModificacao);
+            var dataAtribuicao = ParseDate(ticket.DataAtribuicao);
+
+            var diaSelecionadoLocal = DateTime.Today;
+            DateTimeOffset inicioPlantaoLocal;
+            if (diaSelecionadoLocal.DayOfWeek == DayOfWeek.Monday)
+                inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-3).AddHours(18);
+            else
+                inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-1).AddHours(18);
+
+            var fimPlantaoLocal = diaSelecionadoLocal.AddHours(7).AddMinutes(30);
+            var inicioAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(11).AddMinutes(30);
+            var fimAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(13).AddMinutes(30);
+
+            var inicioPlantaoUtc = inicioPlantaoLocal.ToUniversalTime();
+            var fimPlantaoUtc = fimPlantaoLocal.ToUniversalTime();
+            var inicioAlmocoPlantaoUtc = inicioAlmocoPlantaoLocal.ToUniversalTime();
+            var fimAlmocoPlantaoUtc = fimAlmocoPlantaoLocal.ToUniversalTime();
+
+            bool IsInOnDutyWindow(DateTime? date)
+            {
+                if (!date.HasValue) return false;
+                return (date.Value >= inicioPlantaoUtc && date.Value < fimPlantaoUtc) || (date.Value >= inicioAlmocoPlantaoUtc && date.Value < fimAlmocoPlantaoUtc);
+            }
+
+            return IsInOnDutyWindow(dataCriacao) || IsInOnDutyWindow(dataSolucao) || IsInOnDutyWindow(dataModificacao) || IsInOnDutyWindow(dataAtribuicao);
+        }
+        else if (DateTime.TryParse(ticket.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacaoLocal))
+        {
+            var time = dataCriacaoLocal.TimeOfDay;
+            var dayOfWeek = dataCriacaoLocal.DayOfWeek;
+            bool isNightShift = time >= TimeSpan.FromHours(18) || time < TimeSpan.FromHours(7.5);
+            bool isLunchShift = time >= TimeSpan.FromHours(11.5) && time < TimeSpan.FromHours(13.5);
+            bool isWeekend = dayOfWeek == DayOfWeek.Saturday || dayOfWeek == DayOfWeek.Sunday;
+            return isNightShift || isLunchShift || isWeekend;
+        }
+        return false;
+    }
 }
 
 public record DepartmentStat(string DepartmentName, int TicketCount);
+
+public record TechnicianStat(
+    string TechnicianName,
+    int SolvedCount,
+    string ResolutionRate,
+    int OnDutySolvedCount,
+    string AverageSolveTime
+);

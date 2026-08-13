@@ -25,4 +25,5 @@ public class SavedGeneralReportState
     public List<DepartmentStat> MatrizStats { get; set; } = new();
     public List<DepartmentStat> AgenciasStats { get; set; } = new();
     public List<DepartmentStat> FiliaisStats { get; set; } = new();
+    public List<TechnicianStat> TechnicianStats { get; set; } = new();
 }

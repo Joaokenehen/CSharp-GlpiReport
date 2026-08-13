@@ -61,6 +61,9 @@ public class GeneralReportPdfDocument : IDocument
 
             if (_model.FiliaisStats.Any())
                 column.Item().Element(c => ComposeDepartmentSection(c, "Demandas das Filiais", _model.FiliaisPercentage, _model.FiliaisStats));
+
+            if (_model.TechnicianStats.Any())
+                column.Item().Element(c => ComposeTechnicianSection(c, "Produtividade por Técnico", _model.TechnicianStats));
         });
     }
 
@@ -115,6 +118,37 @@ public class GeneralReportPdfDocument : IDocument
                 table.ColumnsDefinition(columns => { columns.RelativeColumn(); columns.ConstantColumn(60); });
                 table.Header(header => { header.Cell().Text("Setor").Bold(); header.Cell().AlignRight().Text("Chamados").Bold(); });
                 foreach (var stat in stats) { table.Cell().Text(stat.DepartmentName); table.Cell().AlignRight().Text(stat.TicketCount).Bold(); }
+            });
+        });
+    }
+
+    void ComposeTechnicianSection(IContainer container, string title, ICollection<TechnicianStat> stats)
+    {
+        container.Border(1).BorderColor("#CCC").Padding(10).Column(column =>
+        {
+            column.Item().Text(title).Bold().FontSize(14);
+
+            column.Item().PaddingTop(5).Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(); // Name
+                    columns.ConstantColumn(70); // Solved
+                    columns.ConstantColumn(70); // Rate
+                    columns.ConstantColumn(70); // On Duty
+                    columns.ConstantColumn(70); // Avg Time
+                });
+
+                table.Header(header =>
+                {
+                    header.Cell().Text("Técnico").Bold();
+                    header.Cell().AlignCenter().Text("Soluc.").Bold();
+                    header.Cell().AlignCenter().Text("Taxa Res.").Bold();
+                    header.Cell().AlignCenter().Text("Plantão").Bold();
+                    header.Cell().AlignCenter().Text("T. Médio").Bold();
+                });
+
+                foreach (var stat in stats) { table.Cell().Text(stat.TechnicianName); table.Cell().AlignCenter().Text(stat.SolvedCount); table.Cell().AlignCenter().Text(stat.ResolutionRate); table.Cell().AlignCenter().Text(stat.OnDutySolvedCount); table.Cell().AlignCenter().Text(stat.AverageSolveTime); }
             });
         });
     }
