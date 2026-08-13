@@ -54,6 +54,12 @@ public partial class GeneralReportsViewModel : ViewModelBase
     [ObservableProperty]
     private string _taxaResolucaoDia = "N/A";
     [ObservableProperty]
+    private bool _isResolutionRateVisible;
+    [ObservableProperty]
+    private string _averageTicketsPerDay = "N/A";
+    [ObservableProperty]
+    private bool _isAverageVisible;
+    [ObservableProperty]
     private int _totalBusinessHours;
     [ObservableProperty]
     private int _totalOnDuty;
@@ -119,6 +125,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
         AgenciasPercentage = "";
         FiliaisStats.Clear();
         FiliaisPercentage = "";
+        AverageTicketsPerDay = "N/A";
+        IsAverageVisible = false;
+        IsResolutionRateVisible = false;
         ReportSaveName = "";
 
         try
@@ -184,6 +193,10 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         // 2. PROCESSAMENTO: Calcula as estatísticas a partir da lista filtrada (ou completa).
         TotalTicketsFound = ticketsToProcess.Count;
+
+        // Reseta as métricas condicionais
+        IsResolutionRateVisible = filterForToday;
+        IsAverageVisible = !filterForToday;
 
         int onDutyCount = 0;
         int solvedCount = 0;
@@ -308,6 +321,30 @@ public partial class GeneralReportsViewModel : ViewModelBase
             TaxaResolucaoDia = "N/A"; // Não aplicável para o relatório completo
         }
 
+        // Calcula a Média de Chamados por Dia para o relatório completo
+        if (!filterForToday && ticketsToProcess.Any())
+        {
+            var creationDates = ticketsToProcess
+                .Select(t => DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt) ? (DateTime?)dt : null)
+                .Where(d => d.HasValue)
+                .Select(d => d!.Value.Date)
+                .ToList();
+
+            if (creationDates.Any())
+            {
+                var minDate = creationDates.Min();
+                var maxDate = creationDates.Max();
+                // Adiciona 1 para incluir o dia de início e o de fim no período.
+                var totalDays = (maxDate - minDate).TotalDays + 1;
+
+                if (totalDays > 0)
+                {
+                    var average = (double)TotalTicketsFound / totalDays;
+                    AverageTicketsPerDay = $"{average:F1}";
+                }
+            }
+        }
+
         _log.Info("RelatorioGeral", "Estatísticas calculadas:");
         _log.Info("RelatorioGeral", $"  - Abertos no Período: {TotalTicketsFound}");
         _log.Info("RelatorioGeral", $"  - Solucionados/Fechados: {TotalSolved}");
@@ -315,6 +352,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         _log.Info("RelatorioGeral", $"  - Taxa de Resolução: {TaxaResolucaoDia}");
         _log.Info("RelatorioGeral", $"  - Em Plantão: {TotalOnDuty}");
         _log.Info("RelatorioGeral", $"  - Pendentes (do Período): {TotalPending}");
+        _log.Info("RelatorioGeral", $"  - Média Diária: {AverageTicketsPerDay}");
         _log.Info("RelatorioGeral", $"  - Novos: {TotalNew}");
 
         // 3. CÁLCULO POR SETOR
@@ -401,6 +439,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
         AgenciasPercentage = "";
         FiliaisStats.Clear();
         FiliaisPercentage = "";
+        AverageTicketsPerDay = "N/A";
+        IsAverageVisible = false;
+        IsResolutionRateVisible = false;
         ReportSaveName = "";
 
         try
@@ -449,6 +490,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 TotalSolved = this.TotalSolved,
                 TaxaResolucaoDia = this.TaxaResolucaoDia,
                 TotalBusinessHours = this.TotalBusinessHours,
+                AverageTicketsPerDay = this.AverageTicketsPerDay,
                 TotalOnDuty = this.TotalOnDuty,
                 TotalPending = this.TotalPending,
                 TotalNew = this.TotalNew,
@@ -478,6 +520,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             TotalSolved = state.TotalSolved;
             TaxaResolucaoDia = state.TaxaResolucaoDia;
             TotalBusinessHours = state.TotalBusinessHours;
+            AverageTicketsPerDay = state.AverageTicketsPerDay;
             TotalOnDuty = state.TotalOnDuty;
             TotalPending = state.TotalPending;
             TotalNew = state.TotalNew;
@@ -493,6 +536,10 @@ public partial class GeneralReportsViewModel : ViewModelBase
             foreach (var item in state.FiliaisStats) FiliaisStats.Add(item);
 
             GenerationStatus = $"Relatório '{Path.GetFileNameWithoutExtension(reportId)}' carregado.";
+
+            // Ajusta a visibilidade das métricas com base nos dados carregados
+            IsResolutionRateVisible = TaxaResolucaoDia != "N/A";
+            IsAverageVisible = AverageTicketsPerDay != "N/A";
         }
     }
 
@@ -529,7 +576,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         {
             // 1. Gera o PDF em memória
             var model = new GeneralReportPdfModel(
-                TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew,
+                TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay,
                 MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
                 MatrizStats, AgenciasStats, FiliaisStats);
             var document = new Documents.GeneralReportPdfDocument(model);
@@ -614,7 +661,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             {
                 await using var stream = await file.OpenWriteAsync();
                 var model = new GeneralReportPdfModel(
-                    TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew,
+                    TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay,
                     MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
                     MatrizStats, AgenciasStats, FiliaisStats);
                 var document = new Documents.GeneralReportPdfDocument(model);
@@ -674,6 +721,21 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         document.InsertParagraph("Resumo do Período").Bold().FontSize(14);
         var statsTable = document.AddTable(7, 2);
+
+        var stats = new List<KeyValuePair<string, string>>
+        {
+            new("Chamados Abertos no Período:", TotalTicketsFound.ToString()),
+            new("Chamados Solucionados/Fechados:", TotalSolved.ToString()),
+            new("Chamados em Expediente Normal:", TotalBusinessHours.ToString()),
+            new("Chamados em Horário de Plantão:", TotalOnDuty.ToString())
+        };
+
+        if (IsResolutionRateVisible) stats.Add(new("Taxa de Resolução:", TaxaResolucaoDia));
+        if (IsAverageVisible) stats.Add(new("Média Diária de Chamados:", AverageTicketsPerDay));
+
+        stats.Add(new("Chamados Pendentes:", TotalPending.ToString()));
+        stats.Add(new("Chamados Novos:", TotalNew.ToString()));
+
         statsTable.Design = TableDesign.TableGrid;
         statsTable.AutoFit = AutoFit.Contents;
         statsTable.Rows[0].Cells[0].Paragraphs.First().Append("Chamados Abertos no Período:").Append(TotalTicketsFound.ToString()).Bold();
@@ -683,6 +745,11 @@ public partial class GeneralReportsViewModel : ViewModelBase
         statsTable.Rows[4].Cells[0].Paragraphs.First().Append("Taxa de Resolução:").Append(TaxaResolucaoDia).Bold();
         statsTable.Rows[5].Cells[0].Paragraphs.First().Append("Chamados Pendentes:").Append(TotalPending.ToString()).Bold();
         statsTable.Rows[6].Cells[0].Paragraphs.First().Append("Chamados Novos:").Append(TotalNew.ToString()).Bold();
+        for (int i = 0; i < stats.Count; i++)
+        {
+            statsTable.Rows[i].Cells[0].Paragraphs.First().Append(stats[i].Key);
+            statsTable.Rows[i].Cells[1].Paragraphs.First().Append(stats[i].Value).Bold();
+        }
         document.InsertTable(statsTable);
         document.InsertParagraph();
 

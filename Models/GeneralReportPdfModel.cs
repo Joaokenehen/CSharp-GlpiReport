@@ -11,6 +11,7 @@ public record GeneralReportPdfModel(
     string TaxaResolucaoDia,
     int TotalPending,
     int TotalNew,
+    string AverageTicketsPerDay,
     string MatrizPercentage,
     string AgenciasPercentage,
     string FiliaisPercentage,

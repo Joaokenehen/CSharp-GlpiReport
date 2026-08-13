@@ -82,7 +82,10 @@ public class GeneralReportPdfDocument : IDocument
                 ComposeStatRow(table, "Chamados Solucionados/Fechados:", _model.TotalSolved.ToString());
                 ComposeStatRow(table, "Chamados em Expediente Normal:", _model.TotalBusinessHours.ToString());
                 ComposeStatRow(table, "Chamados em Horário de Plantão:", _model.TotalOnDuty.ToString());
-                ComposeStatRow(table, "Taxa de Resolução:", _model.TaxaResolucaoDia);
+                if (_model.TaxaResolucaoDia != "N/A")
+                    ComposeStatRow(table, "Taxa de Resolução:", _model.TaxaResolucaoDia);
+                if (_model.AverageTicketsPerDay != "N/A")
+                    ComposeStatRow(table, "Média Diária de Chamados:", _model.AverageTicketsPerDay);
                 ComposeStatRow(table, "Chamados Pendentes:", _model.TotalPending.ToString());
                 ComposeStatRow(table, "Chamados Novos:", _model.TotalNew.ToString());
             });

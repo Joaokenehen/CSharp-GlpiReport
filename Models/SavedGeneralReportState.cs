@@ -10,6 +10,7 @@ public class SavedGeneralReportState
     public int TotalSolved { get; set; }
     public string TaxaResolucaoDia { get; set; } = "N/A";
     public int TotalBusinessHours { get; set; }
+    public string AverageTicketsPerDay { get; set; } = "N/A";
     public int TotalOnDuty { get; set; }
     public int TotalPending { get; set; }
     public int TotalNew { get; set; }
