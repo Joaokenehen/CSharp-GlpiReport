@@ -16,8 +16,14 @@ public record GeneralReportPdfModel(
     string MatrizPercentage,
     string AgenciasPercentage,
     string FiliaisPercentage,
+    string GaragemPercentage,
+    string EncomendasPercentage,
+    string AgenciasPropriasPercentage,
     ICollection<DepartmentStat> MatrizStats,
     ICollection<DepartmentStat> AgenciasStats,
     ICollection<DepartmentStat> FiliaisStats,
+    ICollection<DepartmentStat> GaragemStats,
+    ICollection<DepartmentStat> EncomendasStats,
+    ICollection<DepartmentStat> AgenciasPropriasStats,
     ICollection<TechnicianStat> TechnicianStats
 );

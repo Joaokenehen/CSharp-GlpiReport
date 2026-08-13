@@ -20,10 +20,16 @@ public class SavedGeneralReportState
     public string MatrizPercentage { get; set; } = "";
     public string AgenciasPercentage { get; set; } = "";
     public string FiliaisPercentage { get; set; } = "";
+    public string GaragemPercentage { get; set; } = "";
+    public string EncomendasPercentage { get; set; } = "";
+    public string AgenciasPropriasPercentage { get; set; } = "";
 
     // Department stats
     public List<DepartmentStat> MatrizStats { get; set; } = new();
     public List<DepartmentStat> AgenciasStats { get; set; } = new();
     public List<DepartmentStat> FiliaisStats { get; set; } = new();
+    public List<DepartmentStat> GaragemStats { get; set; } = new();
+    public List<DepartmentStat> EncomendasStats { get; set; } = new();
+    public List<DepartmentStat> AgenciasPropriasStats { get; set; } = new();
     public List<TechnicianStat> TechnicianStats { get; set; } = new();
 }

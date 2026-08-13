@@ -94,6 +94,21 @@ public partial class GeneralReportsViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<DepartmentStat> _filiaisStats = new();
 
+    [ObservableProperty]
+    private ObservableCollection<DepartmentStat> _garagemStats = new();
+    [ObservableProperty]
+    private string _garagemPercentage = "";
+
+    [ObservableProperty]
+    private ObservableCollection<DepartmentStat> _encomendasStats = new();
+    [ObservableProperty]
+    private string _encomendasPercentage = "";
+
+    [ObservableProperty]
+    private ObservableCollection<DepartmentStat> _agenciasPropriasStats = new();
+    [ObservableProperty]
+    private string _agenciasPropriasPercentage = "";
+
     public Action? OnBackToDashboardRequested { get; set; }
 
     [ObservableProperty]
@@ -132,6 +147,12 @@ public partial class GeneralReportsViewModel : ViewModelBase
         FiliaisPercentage = "";
         AverageTicketsPerDay = "N/A";
         IsAverageVisible = false;
+        GaragemStats.Clear();
+        GaragemPercentage = "";
+        EncomendasStats.Clear();
+        EncomendasPercentage = "";
+        AgenciasPropriasStats.Clear();
+        AgenciasPropriasPercentage = "";
         TechnicianStats.Clear();
         AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
@@ -379,11 +400,27 @@ public partial class GeneralReportsViewModel : ViewModelBase
         var ticketsMatriz = new List<Chamado>();
         var ticketsAgencias = new List<Chamado>();
         var ticketsFiliais = new List<Chamado>();
+        var ticketsGaragem = new List<Chamado>();
+        var ticketsEncomendas = new List<Chamado>();
+        var ticketsAgenciasProprias = new List<Chamado>();
 
         foreach (var ticket in ticketsToProcess)
         {
             string entidade = WebUtility.HtmlDecode(ticket.Entidade ?? "Matriz");
-            if (entidade.Contains("Agências", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias", StringComparison.OrdinalIgnoreCase))
+            // A ordem é importante para a classificação correta, do mais específico para o mais geral.
+            if (entidade.Contains("Garagem", StringComparison.OrdinalIgnoreCase))
+            {
+                ticketsGaragem.Add(ticket);
+            }
+            else if (entidade.Contains("Encomendas", StringComparison.OrdinalIgnoreCase))
+            {
+                ticketsEncomendas.Add(ticket);
+            }
+            else if (entidade.Contains("Agências Próprias", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias Proprias", StringComparison.OrdinalIgnoreCase))
+            {
+                ticketsAgenciasProprias.Add(ticket);
+            }
+            else if (entidade.Contains("Agências", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias", StringComparison.OrdinalIgnoreCase))
             {
                 ticketsAgencias.Add(ticket);
             }
@@ -420,21 +457,33 @@ public partial class GeneralReportsViewModel : ViewModelBase
         ProcessGroup(ticketsMatriz, MatrizStats);
         ProcessGroup(ticketsAgencias, AgenciasStats);
         ProcessGroup(ticketsFiliais, FiliaisStats);
+        ProcessGroup(ticketsGaragem, GaragemStats);
+        ProcessGroup(ticketsEncomendas, EncomendasStats);
+        ProcessGroup(ticketsAgenciasProprias, AgenciasPropriasStats);
 
         if (TotalTicketsFound > 0)
         {
             double matrizCount = MatrizStats.Sum(s => s.TicketCount);
             double agenciasCount = AgenciasStats.Sum(s => s.TicketCount);
             double filiaisCount = FiliaisStats.Sum(s => s.TicketCount);
+            double garagemCount = GaragemStats.Sum(s => s.TicketCount);
+            double encomendasCount = EncomendasStats.Sum(s => s.TicketCount);
+            double agenciasPropriasCount = AgenciasPropriasStats.Sum(s => s.TicketCount);
 
             MatrizPercentage = $"({(matrizCount / TotalTicketsFound):P0})";
             AgenciasPercentage = $"({(agenciasCount / TotalTicketsFound):P0})";
             FiliaisPercentage = $"({(filiaisCount / TotalTicketsFound):P0})";
+            GaragemPercentage = $"({(garagemCount / TotalTicketsFound):P0})";
+            EncomendasPercentage = $"({(encomendasCount / TotalTicketsFound):P0})";
+            AgenciasPropriasPercentage = $"({(agenciasPropriasCount / TotalTicketsFound):P0})";
         }
 
         _log.Info("RelatorioGeral", $"Matriz: {MatrizStats.Count} setores {MatrizPercentage}. " +
                                    $"Agências: {AgenciasStats.Count} setores {AgenciasPercentage}. " +
-                                   $"Filiais: {FiliaisStats.Count} setores {FiliaisPercentage}.");
+                                   $"Filiais: {FiliaisStats.Count} setores {FiliaisPercentage}. " +
+                                   $"Garagem: {GaragemStats.Count} setores {GaragemPercentage}. " +
+                                   $"Encomendas: {EncomendasStats.Count} setores {EncomendasPercentage}. " +
+                                   $"Ag. Próprias: {AgenciasPropriasStats.Count} setores {AgenciasPropriasPercentage}.");
     }
 
     [RelayCommand]
@@ -459,6 +508,12 @@ public partial class GeneralReportsViewModel : ViewModelBase
         FiliaisPercentage = "";
         AverageTicketsPerDay = "N/A";
         IsAverageVisible = false;
+        GaragemStats.Clear();
+        GaragemPercentage = "";
+        EncomendasStats.Clear();
+        EncomendasPercentage = "";
+        AgenciasPropriasStats.Clear();
+        AgenciasPropriasPercentage = "";
         TechnicianStats.Clear();
         AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
@@ -510,6 +565,12 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 TotalSolved = this.TotalSolved,
                 TaxaResolucaoDia = this.TaxaResolucaoDia,
                 TotalBusinessHours = this.TotalBusinessHours,
+                GaragemStats = this.GaragemStats.ToList(),
+                EncomendasStats = this.EncomendasStats.ToList(),
+                AgenciasPropriasStats = this.AgenciasPropriasStats.ToList(),
+                GaragemPercentage = this.GaragemPercentage,
+                EncomendasPercentage = this.EncomendasPercentage,
+                AgenciasPropriasPercentage = this.AgenciasPropriasPercentage,
                 TechnicianStats = this.TechnicianStats.ToList(),
                 AverageSolveTime = this.AverageSolveTime,
                 AverageTicketsPerDay = this.AverageTicketsPerDay,
@@ -542,6 +603,12 @@ public partial class GeneralReportsViewModel : ViewModelBase
             TotalSolved = state.TotalSolved;
             TaxaResolucaoDia = state.TaxaResolucaoDia;
             TotalBusinessHours = state.TotalBusinessHours;
+            GaragemStats.Clear();
+            foreach (var item in state.GaragemStats) GaragemStats.Add(item);
+            EncomendasStats.Clear();
+            foreach (var item in state.EncomendasStats) EncomendasStats.Add(item);
+            AgenciasPropriasStats.Clear();
+            foreach (var item in state.AgenciasPropriasStats) AgenciasPropriasStats.Add(item);
             TechnicianStats.Clear();
             foreach (var item in state.TechnicianStats) TechnicianStats.Add(item);
             AverageSolveTime = state.AverageSolveTime;
@@ -551,6 +618,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
             TotalNew = state.TotalNew;
             MatrizPercentage = state.MatrizPercentage;
             AgenciasPercentage = state.AgenciasPercentage;
+            GaragemPercentage = state.GaragemPercentage;
+            EncomendasPercentage = state.EncomendasPercentage;
+            AgenciasPropriasPercentage = state.AgenciasPropriasPercentage;
             FiliaisPercentage = state.FiliaisPercentage;
 
             MatrizStats.Clear();
@@ -603,7 +673,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
             var model = new GeneralReportPdfModel(
                 TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay, AverageSolveTime,
                 MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
-                MatrizStats, AgenciasStats, FiliaisStats, TechnicianStats);
+                GaragemPercentage, EncomendasPercentage, AgenciasPropriasPercentage,
+                MatrizStats, AgenciasStats, FiliaisStats,
+                GaragemStats, EncomendasStats, AgenciasPropriasStats, TechnicianStats);
             var document = new Documents.GeneralReportPdfDocument(model);
             byte[] pdfBytes = document.GeneratePdf();
 
@@ -688,7 +760,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 var model = new GeneralReportPdfModel(
                     TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay, AverageSolveTime,
                     MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
-                    MatrizStats, AgenciasStats, FiliaisStats,
+                    GaragemPercentage, EncomendasPercentage, AgenciasPropriasPercentage,
+                MatrizStats, AgenciasStats, FiliaisStats,
+                GaragemStats, EncomendasStats, AgenciasPropriasStats,
                     TechnicianStats);
                 var document = new Documents.GeneralReportPdfDocument(model);
                 document.GeneratePdf(stream);
@@ -797,6 +871,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
         CreateDepartmentTable("Demandas da Matriz", MatrizPercentage, MatrizStats);
         CreateDepartmentTable("Demandas das Agências", AgenciasPercentage, AgenciasStats);
         CreateDepartmentTable("Demandas das Filiais", FiliaisPercentage, FiliaisStats);
+        CreateDepartmentTable("Demandas da Garagem", GaragemPercentage, GaragemStats);
+        CreateDepartmentTable("Demandas de Encomendas", EncomendasPercentage, EncomendasStats);
+        CreateDepartmentTable("Demandas de Agências Próprias", AgenciasPropriasPercentage, AgenciasPropriasStats);
 
         if (TechnicianStats.Any())
         {

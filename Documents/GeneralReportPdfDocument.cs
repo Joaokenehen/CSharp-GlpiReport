@@ -62,6 +62,15 @@ public class GeneralReportPdfDocument : IDocument
             if (_model.FiliaisStats.Any())
                 column.Item().Element(c => ComposeDepartmentSection(c, "Demandas das Filiais", _model.FiliaisPercentage, _model.FiliaisStats));
 
+            if (_model.GaragemStats.Any())
+                column.Item().Element(c => ComposeDepartmentSection(c, "Demandas da Garagem", _model.GaragemPercentage, _model.GaragemStats));
+
+            if (_model.EncomendasStats.Any())
+                column.Item().Element(c => ComposeDepartmentSection(c, "Demandas de Encomendas", _model.EncomendasPercentage, _model.EncomendasStats));
+
+            if (_model.AgenciasPropriasStats.Any())
+                column.Item().Element(c => ComposeDepartmentSection(c, "Demandas de Agências Próprias", _model.AgenciasPropriasPercentage, _model.AgenciasPropriasStats));
+
             if (_model.TechnicianStats.Any())
                 column.Item().Element(c => ComposeTechnicianSection(c, "Produtividade por Técnico", _model.TechnicianStats));
         });

@@ -280,6 +280,72 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Demandas da Garagem -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding GaragemStats.Count}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                            <TextBlock Text="Demandas da Garagem" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding GaragemPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding GaragemStats}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DepartmentStat">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,3">
+                                        <TextBlock Grid.Column="0" Text="{Binding DepartmentName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <Border Grid.Column="1" Background="#E9ECEF" CornerRadius="10" Padding="8,2" MinWidth="30">
+                                            <TextBlock Text="{Binding TicketCount}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Demandas de Encomendas -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding EncomendasStats.Count}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                            <TextBlock Text="Demandas de Encomendas" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding EncomendasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding EncomendasStats}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DepartmentStat">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,3">
+                                        <TextBlock Grid.Column="0" Text="{Binding DepartmentName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <Border Grid.Column="1" Background="#E9ECEF" CornerRadius="10" Padding="8,2" MinWidth="30">
+                                            <TextBlock Text="{Binding TicketCount}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Demandas de Agências Próprias -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding AgenciasPropriasStats.Count}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                            <TextBlock Text="Demandas de Agências Próprias" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding AgenciasPropriasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding AgenciasPropriasStats}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DepartmentStat">
+                                    <Grid ColumnDefinitions="*, Auto" Margin="0,3">
+                                        <TextBlock Grid.Column="0" Text="{Binding DepartmentName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <Border Grid.Column="1" Background="#E9ECEF" CornerRadius="10" Padding="8,2" MinWidth="30">
+                                            <TextBlock Text="{Binding TicketCount}" FontWeight="Bold" HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
                 <!-- Produtividade por Técnico -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding TechnicianStats.Count}">
                     <StackPanel Spacing="10">
