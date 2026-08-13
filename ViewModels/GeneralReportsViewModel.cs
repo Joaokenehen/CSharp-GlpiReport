@@ -123,7 +123,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         try
         {
-            // O serviço busca todos os chamados, o filtro será local.
+            // O serviço busca todos os chamados, o filtro para "hoje" será local.
             var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(
                 _connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken, default, default);
 
@@ -132,7 +132,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
             if (allTickets.Any())
             {
-                ProcessTickets(allTickets);
+                ProcessTickets(allTickets, true);
                 GenerationStatus = $"Relatório gerado com sucesso. {TotalTicketsFound} chamados encontrados no período.";
             }
             else
@@ -151,28 +151,37 @@ public partial class GeneralReportsViewModel : ViewModelBase
         }
     }
 
-    private void ProcessTickets(List<Chamado> allTickets)
+    private void ProcessTickets(List<Chamado> allTickets, bool filterForToday)
     {
-        _log.Info("RelatorioGeral", $"Iniciando processamento e filtragem local de {allTickets.Count} chamados.");
+        _log.Info("RelatorioGeral", $"Iniciando processamento. Filtro de hoje: {filterForToday}. Total de chamados: {allTickets.Count}.");
 
-        // Define o período do relatório para HOJE.
-        var reportStartDate = DateTime.Today;
-        var reportEndDate = DateTime.Today.AddDays(1);
+        List<Chamado> ticketsToProcess;
 
-        // 1. FILTRAGEM: Seleciona apenas os chamados criados HOJE.
-        var ticketsNoPeriodo = allTickets.Where(t =>
+        if (filterForToday)
         {
-            if (DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacao))
+            // Define o período do relatório para HOJE.
+            var reportStartDate = DateTime.Today;
+            var reportEndDate = DateTime.Today.AddDays(1);
+
+            // 1. FILTRAGEM: Seleciona apenas os chamados criados HOJE.
+            ticketsToProcess = allTickets.Where(t =>
             {
-                return dataCriacao >= reportStartDate && dataCriacao < reportEndDate;
-            }
-            return false;
-        }).ToList();
+                if (DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacao))
+                {
+                    return dataCriacao >= reportStartDate && dataCriacao < reportEndDate;
+                }
+                return false;
+            }).ToList();
+            _log.Info("RelatorioGeral", $"{ticketsToProcess.Count} chamados encontrados criados hoje.");
+        }
+        else
+        {
+            ticketsToProcess = allTickets;
+            _log.Info("RelatorioGeral", $"Processando todos os {allTickets.Count} chamados (sem filtro de data).");
+        }
 
-        _log.Info("RelatorioGeral", $"{ticketsNoPeriodo.Count} chamados encontrados criados hoje.");
-
-        // 2. PROCESSAMENTO: Calcula as estatísticas a partir da lista já filtrada (chamados de HOJE).
-        TotalTicketsFound = ticketsNoPeriodo.Count;
+        // 2. PROCESSAMENTO: Calcula as estatísticas a partir da lista filtrada (ou completa).
+        TotalTicketsFound = ticketsToProcess.Count;
 
         int onDutyCount = 0;
         int solvedCount = 0;
@@ -180,7 +189,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         int newCount = 0;
         int resolvedTodayCount = 0;
 
-        foreach (var ticket in ticketsNoPeriodo)
+        foreach (var ticket in ticketsToProcess)
         {
             // Contagem de status
             if (ticket.Status == 5 || ticket.Status == 6) // Solucionado ou Fechado (criado no período)
@@ -198,7 +207,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
             // Contagem para Taxa de Resolução: Chamados abertos hoje E resolvidos/fechados hoje
             if ((ticket.Status == 5 || ticket.Status == 6) &&
-                ((DateTime.TryParse(ticket.DataSolucao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataSolucaoLocal) && dataSolucaoLocal.Date == DateTime.Today) ||
+                filterForToday && ((DateTime.TryParse(ticket.DataSolucao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataSolucaoLocal) && dataSolucaoLocal.Date == DateTime.Today) ||
                  (DateTime.TryParse(ticket.DataFechamento, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataFechamentoLocal) && dataFechamentoLocal.Date == DateTime.Today)))
             {
                 resolvedTodayCount++;
@@ -228,22 +237,29 @@ public partial class GeneralReportsViewModel : ViewModelBase
         TotalNew = newCount;
 
         // Calcula a Taxa de Resolução
-        if (TotalTicketsFound > 0)
+        if (filterForToday)
         {
-            TaxaResolucaoDia = $"{(double)resolvedTodayCount / TotalTicketsFound:P0}";
+            if (TotalTicketsFound > 0)
+            {
+                TaxaResolucaoDia = $"{(double)resolvedTodayCount / TotalTicketsFound:P0}";
+            }
+            else
+            {
+                TaxaResolucaoDia = "N/A";
+            }
         }
         else
         {
-            TaxaResolucaoDia = "N/A";
+            TaxaResolucaoDia = "N/A"; // Não aplicável para o relatório completo
         }
 
         _log.Info("RelatorioGeral", "Estatísticas calculadas:");
-        _log.Info("RelatorioGeral", $"  - Abertos Hoje: {TotalTicketsFound}");
+        _log.Info("RelatorioGeral", $"  - Abertos no Período: {TotalTicketsFound}");
         _log.Info("RelatorioGeral", $"  - Solucionados/Fechados: {TotalSolved}");
         _log.Info("RelatorioGeral", $"  - Em Expediente Normal: {TotalBusinessHours}");
         _log.Info("RelatorioGeral", $"  - Taxa de Resolução: {TaxaResolucaoDia}");
         _log.Info("RelatorioGeral", $"  - Em Plantão: {TotalOnDuty}");
-        _log.Info("RelatorioGeral", $"  - Pendentes (do dia): {TotalPending}");
+        _log.Info("RelatorioGeral", $"  - Pendentes (do Período): {TotalPending}");
         _log.Info("RelatorioGeral", $"  - Novos: {TotalNew}");
 
         // 3. CÁLCULO POR SETOR
@@ -253,7 +269,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         var ticketsAgencias = new List<Chamado>();
         var ticketsFiliais = new List<Chamado>();
 
-        foreach (var ticket in ticketsNoPeriodo)
+        foreach (var ticket in ticketsToProcess)
         {
             string entidade = WebUtility.HtmlDecode(ticket.Entidade ?? "Matriz");
             if (entidade.Contains("Agências", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias", StringComparison.OrdinalIgnoreCase))
@@ -274,7 +290,14 @@ public partial class GeneralReportsViewModel : ViewModelBase
         void ProcessGroup(List<Chamado> groupTickets, ObservableCollection<DepartmentStat> collection)
         {
             var stats = groupTickets
-                .Select(t => WebUtility.HtmlDecode(t.Entidade ?? "Matriz").Split('>').Last().Trim())
+                .Select(t =>
+                {
+                    // Extrai o nome do setor da entidade
+                    string setor = WebUtility.HtmlDecode(t.Entidade ?? "Matriz").Split('>').Last().Trim();
+                    // REGRA DE NEGÓCIO: Se o setor for "Setor", renomeia para "Arrecadação".
+                    if (setor.Equals("Setor", StringComparison.OrdinalIgnoreCase)) return "Arrecadação";
+                    return setor;
+                })
                 .GroupBy(setor => setor)
                 .Select(g => new DepartmentStat(g.Key, g.Count()))
                 .OrderByDescending(s => s.TicketCount)
@@ -301,6 +324,47 @@ public partial class GeneralReportsViewModel : ViewModelBase
         _log.Info("RelatorioGeral", $"Matriz: {MatrizStats.Count} setores {MatrizPercentage}. " +
                                    $"Agências: {AgenciasStats.Count} setores {AgenciasPercentage}. " +
                                    $"Filiais: {FiliaisStats.Count} setores {FiliaisPercentage}.");
+    }
+
+    [RelayCommand]
+    private async Task GenerateFullReport()
+    {
+        _log.Info("RelatorioGeral", "Iniciando geração de relatório COMPLETO.");
+        IsGenerating = true;
+        GenerationStatus = "Buscando todos os chamados no GLPI (pode levar um tempo)...";
+
+        // Reseta as estatísticas
+        TotalTicketsFound = 0;
+        TotalSolved = 0;
+        TotalBusinessHours = 0;
+        TotalOnDuty = 0;
+        TotalPending = 0;
+        TotalNew = 0;
+        MatrizStats.Clear();
+        MatrizPercentage = "";
+        AgenciasStats.Clear();
+        AgenciasPercentage = "";
+        FiliaisStats.Clear();
+        FiliaisPercentage = "";
+        ReportSaveName = "";
+
+        try
+        {
+            var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(_connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken, default, default);
+            GenerationStatus = $"Processando todos os {allTickets.Count} chamados...";
+            await Task.Delay(100);
+            ProcessTickets(allTickets, false);
+            GenerationStatus = $"Relatório completo gerado com sucesso. {TotalTicketsFound} chamados encontrados.";
+        }
+        catch (Exception ex)
+        {
+            _log.Erro("RelatorioGeral", $"Falha ao gerar relatório completo: {ex.Message}");
+            GenerationStatus = "Ocorreu um erro ao gerar o relatório completo.";
+        }
+        finally
+        {
+            IsGenerating = false;
+        }
     }
 
     [RelayCommand]

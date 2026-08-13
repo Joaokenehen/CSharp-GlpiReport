@@ -258,11 +258,102 @@ public class ChamadoService : IChamadoService
 
     public async Task<List<Chamado>> ObterChamadosParaRelatorioGeralAsync(string urlBase, string appToken, string sessionToken, DateTimeOffset startDate, DateTimeOffset endDate)
     {
-        _log.Info("API_GERAL", "Iniciando busca completa de todos os chamados (fetchAll=true). O filtro será aplicado localmente.");
-        // Revertendo para a lógica de buscar todos os chamados e deixar o ViewModel filtrar.
-        // Isso é mais lento, mas mais confiável se o filtro da API não estiver funcionando como esperado.
-        var todosOsChamados = await ObterChamadosAsync(urlBase, appToken, sessionToken);
-        _log.Sucesso("API_GERAL", $"{todosOsChamados.Count} chamados baixados do GLPI.");
-        return todosOsChamados;
+        _log.Info("API_GERAL", "Iniciando busca COMPLETA de todos os dados do GLPI com paginação...");
+
+        using var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("App-Token", appToken);
+        client.DefaultRequestHeaders.Add("Session-Token", sessionToken);
+
+        var jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            NumberHandling = JsonNumberHandling.AllowReadingFromString
+        };
+
+        // 1. Busca todos os dados necessários com paginação
+        var userMap = await GetUserMapAsync(client, urlBase, jsonOptions);
+        var chamados = await FetchAllPaginatedAsync<Chamado>(client, $"{urlBase.TrimEnd('/')}/Ticket?expand_dropdowns=true&sort=id&order=ASC", jsonOptions);
+        var atores = await FetchAllTicketUsersPaginatedAsync(client, $"{urlBase.TrimEnd('/')}/Ticket_User?sort=id&order=ASC", jsonOptions);
+        var solucoes = await FetchAllPaginatedAsync<Solution>(client, $"{urlBase.TrimEnd('/')}/ITILSolution?sort=id&order=ASC", jsonOptions);
+        var followups = await FetchAllPaginatedAsync<Followup>(client, $"{urlBase.TrimEnd('/')}/ITILFollowup?sort=id&order=ASC", jsonOptions);
+
+        _log.Info("API_GERAL", $"Total de {chamados.Count} chamados, {atores.Count} atores, {solucoes.Count} soluções, {followups.Count} followups encontrados.");
+
+        // 2. Enriquece os dados (mesma lógica do ObterChamadosAsync, mas com o dataset completo)
+        var solucoesPorTicketId = solucoes
+            .Where(s => s.ItemType == "Ticket" && int.TryParse(s.ItemsId?.ToString(), out _))
+            .GroupBy(s => int.Parse(s.ItemsId!.ToString()!))
+            .ToDictionary(g => g.Key, g => g.First().Content);
+
+        var followupsPorTicketId = followups
+            .Where(f => f.ItemType == "Ticket" && f.IsPrivate == 1 && int.TryParse(f.ItemsId?.ToString(), out _))
+            .GroupBy(f => int.Parse(f.ItemsId!.ToString()!))
+            .ToDictionary(g => g.Key, g => g.First().Content);
+
+        foreach (var chamado in chamados)
+        {
+            // Atribui técnico
+            var tecnicosAtribuidos = atores.Where(a => a.TicketsId.HasValue && a.TicketsId.Value == chamado.Id && a.Type == 2);
+            var nomesDosTecnicos = tecnicosAtribuidos
+                .Where(t => !string.IsNullOrEmpty(t.UsersId) && userMap.ContainsKey(t.UsersId))
+                .Select(t => userMap[t.UsersId!])
+                .Distinct();
+
+            if (nomesDosTecnicos.Any())
+            {
+                chamado.TecnicoAtribuido = string.Join(", ", nomesDosTecnicos);
+            }
+
+            // Atribui descrição (solução ou followup)
+            if ((chamado.Status == 5 || chamado.Status == 6) && solucoesPorTicketId.TryGetValue(chamado.Id, out var solucao))
+            {
+                chamado.Descricao = solucao;
+            }
+            else if ((chamado.Status >= 2 && chamado.Status <= 4) && followupsPorTicketId.TryGetValue(chamado.Id, out var followup))
+            {
+                chamado.Descricao = followup;
+            }
+        }
+
+        _log.Sucesso("API_GERAL", $"{chamados.Count} chamados totais baixados e enriquecidos do GLPI.");
+        return chamados;
+    }
+
+    private async Task<List<T>> FetchAllPaginatedAsync<T>(HttpClient client, string baseUrl, JsonSerializerOptions options)
+    {
+        var allItems = new List<T>();
+        int rangeStart = 0;
+        const int rangeSize = 500; // Busca de 500 em 500
+        bool hasMore = true;
+
+        while (hasMore)
+        {
+            string paginatedUrl = $"{baseUrl}&range={rangeStart}-{rangeStart + rangeSize - 1}";
+            var response = await client.GetAsync(paginatedUrl);
+            if (!response.IsSuccessStatusCode) break;
+
+            var json = await response.Content.ReadAsStringAsync();
+            var pageItems = JsonSerializer.Deserialize<List<T>>(json, options) ?? new List<T>();
+
+            if (pageItems.Any())
+            {
+                allItems.AddRange(pageItems);
+                rangeStart += pageItems.Count;
+                if (pageItems.Count < rangeSize) hasMore = false;
+            }
+            else
+            {
+                hasMore = false;
+            }
+        }
+        return allItems;
+    }
+
+    private async Task<List<TicketUser>> FetchAllTicketUsersPaginatedAsync(HttpClient client, string baseUrl, JsonSerializerOptions options)
+    {
+        // A busca de TicketUser é especial por causa do seu parser customizado
+        var jsonList = await FetchAllPaginatedAsync<JsonElement>(client, baseUrl, options);
+        var jsonArrayString = JsonSerializer.Serialize(jsonList);
+        return ParseTicketUsers(jsonArrayString);
     }
 }

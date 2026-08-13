@@ -266,6 +266,12 @@ public partial class DashboardViewModel : ViewModelBase
             string[] partesEntidade = WebUtility.HtmlDecode(chamado.Entidade ?? "Matriz").Split('>');
             string setor = partesEntidade[^1].Trim();
 
+            // REGRA DE NEGÓCIO: Se o setor for "Setor", renomeia para "Arrecadação".
+            if (setor.Equals("Setor", StringComparison.OrdinalIgnoreCase))
+            {
+                setor = "Arrecadação";
+            }
+
             string usuario = chamado.NomeUsuario ?? "Usuário";
             if (usuario.Contains('.'))
             {
