@@ -4,7 +4,8 @@
              xmlns:m="using:RelatorioGLPIApp.Models"
              x:Class="RelatorioGLPIApp.Views.TechnicianDetailView"
              x:DataType="vm:TechnicianDetailViewModel"
-             Background="#F3F4F6">
+             Background="#F3F4F6"
+             x:Name="RootControl">
 
     <Grid RowDefinitions="Auto, *">
         <!-- Barra de Título com botão Voltar -->
@@ -30,15 +31,41 @@
                 <ItemsControl ItemsSource="{Binding SolvedTickets}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="m:TechnicianDetailTicket">
-                            <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,8">
-                                <Grid ColumnDefinitions="Auto, *, Auto">
-                                    <TextBlock Grid.Column="0" Text="{Binding Id, StringFormat='ID: {0}'}" FontWeight="Bold" Width="80" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
-                                    <Border Grid.Column="2" Background="{Binding Type, Converter={StaticResource TicketTypeToColorConverter}}" CornerRadius="4" Padding="8,4">
-                                        <TextBlock Text="{Binding Type}" FontSize="12" FontWeight="Bold" Foreground="White"/>
-                                    </Border>
-                                </Grid>
-                            </Border>
+                            <StackPanel>
+                                <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,8">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" VerticalAlignment="Center">
+                                        <!-- Botão para expandir/recolher -->
+                                        <Button Grid.Column="0" Command="{Binding #RootControl.DataContext.ToggleConversationCommand}" CommandParameter="{Binding}" Background="Transparent" VerticalAlignment="Center" Padding="4">
+                                            <PathIcon Width="16" Height="16" Data="{Binding IsExpanded, Converter={StaticResource BooleanToChevronConverter}}" Foreground="#495057"/>
+                                        </Button>
+                                        <TextBlock Grid.Column="1" Text="{Binding Id, StringFormat='ID: {0}'}" FontWeight="Bold" Width="70" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                        <Border Grid.Column="3" Background="{Binding Type, Converter={StaticResource TicketTypeToColorConverter}}" CornerRadius="4" Padding="8,4">
+                                            <TextBlock Text="{Binding Type}" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                                <!-- Painel da Conversa (visível quando expandido) -->
+                                <Panel IsVisible="{Binding IsExpanded}" Margin="40,10,10,15">
+                                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoadingConversation}" HorizontalAlignment="Stretch" Height="3" VerticalAlignment="Top"/>
+                                    <ItemsControl ItemsSource="{Binding Conversation}" IsVisible="{Binding !IsLoadingConversation}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="m:TicketFollowup">
+                                                <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,5" Background="{Binding IsPrivate, Converter={StaticResource IsPrivateToBackgroundConverter}}">
+                                                    <StackPanel>
+                                                        <Grid ColumnDefinitions="*, Auto">
+                                                            <TextBlock Grid.Column="0" FontWeight="Bold" Text="{Binding Author}" Foreground="{Binding IsPrivate, Converter={StaticResource IsPrivateToColorConverter}}"/>
+                                                            <TextBlock Grid.Column="1" FontSize="11" Foreground="#666" Text="{Binding Date}"/>
+                                                        </Grid>
+                                                        <TextBlock Grid.Row="1" Text="{Binding Content}" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="Nenhuma conversa encontrada para este chamado." IsVisible="{Binding !Conversation.Count, FallbackValue=False}" HorizontalAlignment="Center" Foreground="#888" Margin="10"/>
+                                </Panel>
+                            </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

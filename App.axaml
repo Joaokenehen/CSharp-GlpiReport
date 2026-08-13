@@ -16,6 +16,9 @@
 
     <Application.Resources>
         <converters:TicketTypeToColorConverter x:Key="TicketTypeToColorConverter"/>
+        <converters:BooleanToChevronConverter x:Key="BooleanToChevronConverter"/>
+        <converters:IsPrivateToColorConverter x:Key="IsPrivateToColorConverter"/>
+        <converters:IsPrivateToBackgroundConverter x:Key="IsPrivateToBackgroundConverter"/>
     </Application.Resources>
 
 </Application>

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -19,12 +20,14 @@ public partial class TechnicianDetailViewModel : ViewModelBase
 
     public Action? OnBackToGeneralReportsRequested { get; set; }
 
+    private readonly GlpiConnectionInfo _connectionInfo;
     private readonly IOnDutyChecker _onDutyChecker;
 
-    public TechnicianDetailViewModel(string technicianName, List<Chamado> allProcessedTickets, bool filterForToday, IOnDutyChecker onDutyChecker)
+    public TechnicianDetailViewModel(string technicianName, List<Chamado> allProcessedTickets, bool filterForToday, IOnDutyChecker onDutyChecker, GlpiConnectionInfo connectionInfo)
     {
         _technicianName = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(technicianName.Replace('.', ' '));
         _onDutyChecker = onDutyChecker;
+        _connectionInfo = connectionInfo;
         LoadTickets(technicianName, allProcessedTickets, filterForToday);
     }
 
@@ -39,7 +42,7 @@ public partial class TechnicianDetailViewModel : ViewModelBase
         foreach (var ticket in techTickets)
         {
             string ticketType = _onDutyChecker.IsTicketOnDuty(ticket, filterForToday) ? "Plantão" : "Normal";
-            SolvedTickets.Add(new TechnicianDetailTicket(ticket.Id, ticket.Titulo, ticketType));
+            SolvedTickets.Add(new TechnicianDetailTicket(ticket.Id, ticket.Titulo ?? "Título não encontrado", ticketType));
         }
     }
 
@@ -47,5 +50,25 @@ public partial class TechnicianDetailViewModel : ViewModelBase
     private void GoBack()
     {
         OnBackToGeneralReportsRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task ToggleConversation(TechnicianDetailTicket? ticket)
+    {
+        if (ticket == null) return;
+
+        ticket.IsExpanded = !ticket.IsExpanded;
+
+        // Only load the conversation if it's being expanded and hasn't been loaded yet.
+        if (ticket.IsExpanded && ticket.Conversation.Count == 0)
+        {
+            ticket.IsLoadingConversation = true;
+            var followups = await _connectionInfo.ChamadoService.GetTicketFollowupsAsync(_connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken, ticket.Id);
+            foreach (var followup in followups)
+            {
+                ticket.Conversation.Add(followup);
+            }
+            ticket.IsLoadingConversation = false;
+        }
     }
 }

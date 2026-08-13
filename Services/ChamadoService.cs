@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using RelatorioGLPIApp.Models;
 
@@ -377,5 +378,134 @@ public class ChamadoService : IChamadoService
         var jsonList = await FetchAllPaginatedAsync<JsonElement>(client, baseUrl, options);
         var jsonArrayString = JsonSerializer.Serialize(jsonList);
         return ParseTicketUsers(jsonArrayString);
+    }
+
+    // Helper class to deserialize the wrapped response from the /search endpoint
+    private class GlpiSearchResponse<T>
+    {
+        [JsonPropertyName("data")]
+        public List<T> Data { get; set; } = new List<T>();
+    }
+
+    // Modelo para desserializar a resposta da API para um Followup
+    private class GlpiFollowup
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("users_id")]
+        public string? UsersId { get; set; }
+
+        [JsonPropertyName("content")]
+        public string Content { get; set; } = string.Empty;
+
+        [JsonPropertyName("date")]
+        public string? Date { get; set; }
+
+        [JsonPropertyName("is_private")]
+        public int IsPrivate { get; set; } // 1 for private (technician), 0 for public (user)
+    }
+
+    public async Task<List<TicketFollowup>> GetTicketFollowupsAsync(string urlBase, string appToken, string sessionToken, int ticketId)
+    {
+        _log.Info("API", $"Buscando follow-ups para o chamado ID: {ticketId}");
+        var followups = new List<TicketFollowup>();
+
+        try
+        {
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("App-Token", appToken);
+            client.DefaultRequestHeaders.Add("Session-Token", sessionToken);
+
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                NumberHandling = JsonNumberHandling.AllowReadingFromString
+            };
+
+            // O mapa de usuários é necessário para obter os nomes dos autores
+            var userMap = await GetUserMapAsync(client, urlBase, jsonOptions);
+
+            // Busca o chamado original para saber quem é o requisitante (para follow-ups públicos)
+            string ticketEndpoint = $"{urlBase.TrimEnd('/')}/Ticket/{ticketId}?expand_dropdowns=true";
+            var ticketResp = await client.GetAsync(ticketEndpoint);
+            string requesterName = "Requisitante";
+            if (ticketResp.IsSuccessStatusCode)
+            {
+                var ticketJson = await ticketResp.Content.ReadAsStringAsync();
+                // A resposta para um único ticket pode não ser uma lista.
+                // Vamos usar um JsonDocument para extrair o 'users_id_recipient'
+                using var doc = JsonDocument.Parse(ticketJson);
+                if (doc.RootElement.TryGetProperty("users_id_recipient", out var userIdProp) && userIdProp.ValueKind == JsonValueKind.Number)
+                {
+                    string requesterId = userIdProp.GetInt32().ToString();
+                    if (userMap.TryGetValue(requesterId, out var name))
+                    {
+                        requesterName = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(name.Replace('.', ' '));
+                    }
+                }
+            }
+
+            // Busca os follow-ups associados ao ticket
+            // MUDANÇA: Usar o endpoint de 'search' que é o correto para aplicar critérios.
+            string endpoint = $"{urlBase.TrimEnd('/')}/search/ITILFollowup?is_deleted=0&expand_dropdowns=true" +
+                              $"&criteria[0][field]=12" + // itemtype
+                              $"&criteria[0][searchtype]=equals" +
+                              $"&criteria[0][value]=Ticket" +
+                              $"&criteria[1][field]=2" +  // items_id (the ticket id)
+                              $"&criteria[1][searchtype]=equals" +
+                              $"&criteria[1][value]={ticketId}" +
+                              $"&search_op=AND" +
+                              $"&sort=date&order=ASC";
+            HttpResponseMessage response = await client.GetAsync(endpoint);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _log.Erro("API", $"Erro ao buscar follow-ups para o chamado {ticketId}: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}");
+                return followups;
+            }
+
+            string json = await response.Content.ReadAsStringAsync();
+            // MUDANÇA: Desserializar a resposta do 'search' que vem encapsulada.
+            var searchResult = JsonSerializer.Deserialize<GlpiSearchResponse<GlpiFollowup>>(json, jsonOptions);
+            var glpiFollowups = searchResult?.Data ?? new List<GlpiFollowup>();
+
+            foreach (var glpiFollowup in glpiFollowups)
+            {
+                string author = "Desconhecido";
+                if (glpiFollowup.IsPrivate == 1) // Follow-up privado (técnico)
+                {
+                    if (!string.IsNullOrEmpty(glpiFollowup.UsersId) && userMap.TryGetValue(glpiFollowup.UsersId, out var techName))
+                    {
+                        author = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' '));
+                    }
+                }
+                else // Follow-up público (requisitante)
+                {
+                    author = requesterName;
+                }
+
+                string formattedDate = "Data indisponível";
+                if (DateTime.TryParse(glpiFollowup.Date, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeLocal, out var date))
+                {
+                    formattedDate = date.ToString("g", System.Globalization.CultureInfo.CurrentCulture);
+                }
+
+                followups.Add(new TicketFollowup
+                {
+                    Content = Regex.Replace(System.Net.WebUtility.HtmlDecode(glpiFollowup.Content ?? ""), "<.*?>", string.Empty).Trim(),
+                    Author = author,
+                    Date = formattedDate,
+                    IsPrivate = glpiFollowup.IsPrivate == 1
+                });
+            }
+            _log.Sucesso("API", $"{followups.Count} follow-ups encontrados para o chamado {ticketId}.");
+        }
+        catch (Exception ex)
+        {
+            _log.Erro("API", $"Exceção ao buscar follow-ups: {ex.Message}");
+        }
+
+        return followups;
     }
 }

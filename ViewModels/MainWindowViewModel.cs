@@ -63,13 +63,13 @@ public partial class MainWindowViewModel : ViewModelBase
             _dashboardViewModel.OnLoadGeneralReportAndNavigateRequested += (reportId) =>
             {
                 ShowGeneralReportsView(connectionInfo, _dashboardViewModel);
-                _generalReportsViewModel?.LoadStateCommand.Execute(reportId);
+                _ = _generalReportsViewModel?.LoadStateCommand.ExecuteAsync(reportId);
             };
 
             _dashboardViewModel.OnLoadTechnicianReportAndNavigateRequested += (reportId) =>
             {
                 ShowTechnicianReportsView(connectionInfo, _dashboardViewModel);
-                _technicianReportsViewModel?.LoadStateCommand.Execute(reportId);
+                _ = _technicianReportsViewModel?.LoadStateCommand.ExecuteAsync(reportId);
             };
         }
 
@@ -93,7 +93,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _generalReportsViewModel.OnShowTechnicianDetailRequested += (techName, tickets, isDaily) =>
             {
                 _log.Info("Navigation", $"Evento OnShowTechnicianDetailRequested recebido para o técnico: {techName}.");
-                ShowTechnicianDetailView(techName, tickets, isDaily, _generalReportsViewModel, _generalReportsViewModel);
+                ShowTechnicianDetailView(techName, tickets, isDaily, _generalReportsViewModel, _generalReportsViewModel, connectionInfo);
             };
         }
         PaginaAtual = _generalReportsViewModel;
@@ -115,16 +115,16 @@ public partial class MainWindowViewModel : ViewModelBase
             _technicianReportsViewModel.OnShowTechnicianDetailRequested += (techName, tickets, isDaily) =>
             {
                 _log.Info("Navigation", $"Evento OnShowTechnicianDetailRequested recebido para o técnico: {techName}.");
-                ShowTechnicianDetailView(techName, tickets, isDaily, _technicianReportsViewModel, _technicianReportsViewModel);
+                ShowTechnicianDetailView(techName, tickets, isDaily, _technicianReportsViewModel, _technicianReportsViewModel, connectionInfo);
             };
         }
         PaginaAtual = _technicianReportsViewModel;
     }
 
-    private void ShowTechnicianDetailView(string techName, List<Chamado> tickets, bool isDaily, IOnDutyChecker onDutyChecker, ViewModelBase parentViewModel)
+    private void ShowTechnicianDetailView(string techName, List<Chamado> tickets, bool isDaily, IOnDutyChecker onDutyChecker, ViewModelBase parentViewModel, GlpiConnectionInfo connectionInfo)
     {
         _log.Info("Navigation", "Criando e exibindo a TechnicianDetailView.");
-        var detailViewModel = new TechnicianDetailViewModel(techName, tickets, isDaily, onDutyChecker);
+        var detailViewModel = new TechnicianDetailViewModel(techName, tickets, isDaily, onDutyChecker, connectionInfo);
         detailViewModel.OnBackToGeneralReportsRequested += () =>
         {
             _log.Info("Navigation", $"Retornando da TechnicianDetailView para a tela anterior.");

@@ -1,7 +1,28 @@
-namespace RelatorioGLPIApp.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.ObjectModel;
 
-public record TechnicianDetailTicket(
-    int Id,
-    string Title,
-    string Type // "Plantão" ou "Normal"
-);
+namespace RelatorioGLPIApp.Models
+{
+    public partial class TechnicianDetailTicket : ObservableObject
+    {
+        public int Id { get; init; }
+        public string Title { get; init; }
+        public string Type { get; init; }
+
+        [ObservableProperty]
+        private bool _isExpanded;
+
+        [ObservableProperty]
+        private bool _isLoadingConversation;
+
+        [ObservableProperty]
+        private ObservableCollection<TicketFollowup> _conversation = new();
+
+        public TechnicianDetailTicket(int id, string title, string type)
+        {
+            Id = id;
+            Title = title;
+            Type = type;
+        }
+    }
+}
