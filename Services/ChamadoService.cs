@@ -483,7 +483,9 @@ public class ChamadoService : IChamadoService
 
                     followups.Add(new TicketFollowup
                     {
-                        Content = Regex.Replace(System.Net.WebUtility.HtmlDecode(glpiFollowup.Content ?? ""), "<.*?>", string.Empty).Trim(),
+                        Content = Regex.Replace(
+                            System.Net.WebUtility.HtmlDecode(glpiFollowup.Content ?? "").Replace("&nbsp;", " "), // Trata &nbsp;
+                            "<.*?>", string.Empty).Trim(),
                         Author = author,
                         Date = formattedDate,
                         IsPrivate = glpiFollowup.IsPrivate == 1
@@ -507,7 +509,11 @@ public class ChamadoService : IChamadoService
                     string author = "Desconhecido";
                     if (!string.IsNullOrEmpty(glpiSolution.UsersId) && userMap.TryGetValue(glpiSolution.UsersId, out var techName))
                     {
-                        author = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' '));
+                        author = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' ')); // Nome do técnico específico
+                    }
+                    else
+                    {
+                        author = "Técnico"; // Se não encontrar o nome, assume "Técnico" para soluções
                     }
 
                     string formattedDate = "Data indisponível";
@@ -516,9 +522,12 @@ public class ChamadoService : IChamadoService
                         formattedDate = date.ToString("g", System.Globalization.CultureInfo.CurrentCulture);
                     }
 
+                    string cleanedContent = System.Net.WebUtility.HtmlDecode(glpiSolution.Content ?? "").Replace("&nbsp;", " "); // Trata &nbsp;
+                    cleanedContent = Regex.Replace(cleanedContent, "<.*?>", string.Empty).Trim();
+
                     followups.Add(new TicketFollowup
                     {
-                        Content = "[SOLUÇÃO] " + Regex.Replace(System.Net.WebUtility.HtmlDecode(glpiSolution.Content ?? ""), "<.*?>", string.Empty).Trim(),
+                        Content = "[SOLUÇÃO] " + cleanedContent,
                         Author = author,
                         Date = formattedDate,
                         IsPrivate = true // Soluções são sempre de técnicos

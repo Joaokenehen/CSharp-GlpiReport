@@ -5,86 +5,118 @@
              x:DataType="vm:LoginViewModel"
              Background="#F3F4F6">
 
-    <Border Background="White" MaxWidth="450" VerticalAlignment="Center" Padding="30" CornerRadius="10" BoxShadow="0 4 10 0 #20000000">
-        <StackPanel Spacing="20">
+    <UserControl.Styles>
+        <Style Selector="Button.WindowButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#495057"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.WindowButton:pointerover">
+            <Setter Property="Background" Value="#E9ECEF"/>
+        </Style>
+        <Style Selector="Button.CloseButton:pointerover">
+            <Setter Property="Background" Value="#DC3545"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+    </UserControl.Styles>
 
-            <TextBlock Text="Integração GLPI" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#333333"/>
-            <TextBlock Text="Gerador de Relatórios" FontSize="16" HorizontalAlignment="Center" Foreground="#666666" Margin="0,-15,0,10"/>
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="URL da API" FontWeight="SemiBold"/>
-                <TextBox Text="{Binding UrlGlpi}" Watermark="https://suporte.exemplo.com.br/apirest.php" />
-            </StackPanel>
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="User Token" FontWeight="SemiBold"/>
-                <Border Background="#fff" BorderBrush="#DEE2E6" BorderThickness="1" CornerRadius="4">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBox Grid.Column="0" Text="{Binding UserToken}" PasswordChar="{Binding UserTokenPasswordChar}"
-                                 Watermark="Cole seu User Token aqui"
-                                 BorderThickness="0" Background="Transparent" VerticalAlignment="Center" Padding="10,6"/>
-                        <Button Grid.Column="1" Command="{Binding ToggleUserTokenVisibilityCommand}" Background="Transparent" VerticalAlignment="Center" Margin="5,0">
-                            <Panel>
-                                <PathIcon IsVisible="{Binding !IsUserTokenVisible}" Width="16" Height="16" Foreground="#666"
-                                          Data="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
-                                <PathIcon IsVisible="{Binding IsUserTokenVisible}" Width="16" Height="16" Foreground="#666"
-                                          Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                            </Panel>
-                        </Button>
-                    </Grid>
-                </Border>
-            </StackPanel>
-
-            <StackPanel Spacing="5">
-                <TextBlock Text="App Token" FontWeight="SemiBold"/>
-                <Border Background="#fff" BorderBrush="#DEE2E6" BorderThickness="1" CornerRadius="4">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBox Grid.Column="0" Text="{Binding AppToken}" PasswordChar="{Binding AppTokenPasswordChar}"
-                                 Watermark="Cole seu App Token aqui"
-                                 BorderThickness="0" Background="Transparent" VerticalAlignment="Center" Padding="10,6"/>
-                        <Button Grid.Column="1" Command="{Binding ToggleAppTokenVisibilityCommand}" Background="Transparent" VerticalAlignment="Center" Margin="5,0">
-                            <Panel>
-                                <PathIcon IsVisible="{Binding !IsAppTokenVisible}" Width="16" Height="16" Foreground="#666"
-                                          Data="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
-                                <PathIcon IsVisible="{Binding IsAppTokenVisible}" Width="16" Height="16" Foreground="#666"
-                                          Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                            </Panel>
-                        </Button>
-                    </Grid>
-                </Border>
-            </StackPanel>
-
-            <CheckBox Content="Lembrar meu acesso"
-                      IsChecked="{Binding IsRememberMe}"
-                      Margin="0,10,0,0"/>
-
-            <Button Content="Entrar"
-                    Command="{Binding EntrarCommand}"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center"
-                    Background="#0078D4"
-                    Foreground="White"
-                    Padding="10"
-                    FontSize="16"
-                    FontWeight="Bold"
-                    CornerRadius="5"
-                    Cursor="Hand"
-                    Margin="0,10,0,0"/>
-
-            <!-- Indicador de Carregamento -->
-            <ProgressBar IsIndeterminate="True"
-                         IsVisible="{Binding IsLoading}"
-                         HorizontalAlignment="Stretch"
-                         Height="5"
-                         Margin="0,5,0,0"/>
-
-            <TextBlock Text="{Binding Mensagem}"
-                       Foreground="#D83B01"
-                       FontWeight="SemiBold"
-                       HorizontalAlignment="Center"
-                       TextWrapping="Wrap"/>
-
+    <Grid>
+        <!-- Controles de Janela -->
+        <StackPanel Orientation="Horizontal" Spacing="5"
+                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,5,10,0">
+            <Button Name="MinimizeButton" Content="—" Classes="WindowButton" Click="MinimizeWindow"/>
+            <Button Name="MaximizeButton" Content="☐" Classes="WindowButton" Click="MaximizeWindow"/>
+            <Button Name="CloseButton" Content="✕" Classes="WindowButton CloseButton" Click="CloseWindow"/>
         </StackPanel>
-    </Border>
+
+        <Border Background="White" MaxWidth="450" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="30" CornerRadius="10" BoxShadow="0 4 10 0 #20000000">
+            <StackPanel Spacing="20">
+
+                <TextBlock Text="Integração GLPI" FontSize="28" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#333333"/>
+                <TextBlock Text="Gerador de Relatórios" FontSize="16" HorizontalAlignment="Center" Foreground="#666666" Margin="0,-15,0,10"/>
+
+                <StackPanel Spacing="5">
+                    <TextBlock Text="URL da API" FontWeight="SemiBold"/>
+                    <TextBox Text="{Binding UrlGlpi}" Watermark="https://suporte.exemplo.com.br/apirest.php" />
+                </StackPanel>
+
+                <StackPanel Spacing="5">
+                    <TextBlock Text="User Token" FontWeight="SemiBold"/>
+                    <Border Background="#fff" BorderBrush="#DEE2E6" BorderThickness="1" CornerRadius="4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBox Grid.Column="0" Text="{Binding UserToken}" PasswordChar="{Binding UserTokenPasswordChar}"
+                                     Watermark="Cole seu User Token aqui"
+                                     BorderThickness="0" Background="Transparent" VerticalAlignment="Center" Padding="10,6"/>
+                            <Button Grid.Column="1" Command="{Binding ToggleUserTokenVisibilityCommand}" Background="Transparent" VerticalAlignment="Center" Margin="5,0">
+                                <Panel>
+                                    <PathIcon IsVisible="{Binding !IsUserTokenVisible}" Width="16" Height="16" Foreground="#666"
+                                              Data="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+                                    <PathIcon IsVisible="{Binding IsUserTokenVisible}" Width="16" Height="16" Foreground="#666"
+                                              Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                                </Panel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Spacing="5">
+                    <TextBlock Text="App Token" FontWeight="SemiBold"/>
+                    <Border Background="#fff" BorderBrush="#DEE2E6" BorderThickness="1" CornerRadius="4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBox Grid.Column="0" Text="{Binding AppToken}" PasswordChar="{Binding AppTokenPasswordChar}"
+                                     Watermark="Cole seu App Token aqui"
+                                     BorderThickness="0" Background="Transparent" VerticalAlignment="Center" Padding="10,6"/>
+                            <Button Grid.Column="1" Command="{Binding ToggleAppTokenVisibilityCommand}" Background="Transparent" VerticalAlignment="Center" Margin="5,0">
+                                <Panel>
+                                    <PathIcon IsVisible="{Binding !IsAppTokenVisible}" Width="16" Height="16" Foreground="#666"
+                                              Data="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+                                    <PathIcon IsVisible="{Binding IsAppTokenVisible}" Width="16" Height="16" Foreground="#666"
+                                              Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                                </Panel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <CheckBox Content="Lembrar meu acesso"
+                          IsChecked="{Binding IsRememberMe}"
+                          Margin="0,10,0,0"/>
+
+                <Button Content="Entrar"
+                        Command="{Binding EntrarCommand}"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Center"
+                        Background="#0078D4"
+                        Foreground="White"
+                        Padding="10"
+                        FontSize="16"
+                        FontWeight="Bold"
+                        CornerRadius="5"
+                        Cursor="Hand"
+                        Margin="0,10,0,0"/>
+
+                <!-- Indicador de Carregamento -->
+                <ProgressBar IsIndeterminate="True"
+                             IsVisible="{Binding IsLoading}"
+                             HorizontalAlignment="Stretch"
+                             Height="5"
+                             Margin="0,5,0,0"/>
+
+                <TextBlock Text="{Binding Mensagem}"
+                           Foreground="#D83B01"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           TextWrapping="Wrap"/>
+
+            </StackPanel>
+        </Border>
+    </Grid>
 
 </UserControl>

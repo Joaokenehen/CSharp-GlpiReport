@@ -22,6 +22,10 @@
         <Style Selector="Button.WindowButton:pointerover">
             <Setter Property="Background" Value="#E9ECEF"/>
         </Style>
+        <Style Selector="Button.CloseButton:pointerover">
+            <Setter Property="Background" Value="#DC3545"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
         <Style Selector="Button.ActionButton">
             <Setter Property="Background" Value="#F8F9FA"/>
             <Setter Property="BorderBrush" Value="#DEE2E6"/>
@@ -103,7 +107,7 @@
                     <Border Background="#DEE2E6" Width="1" Margin="0,8" VerticalAlignment="Stretch"/>
                     <Button Name="MinimizeButton" Content="—" Classes="WindowButton" Click="MinimizeWindow"/>
                     <Button Name="MaximizeButton" Content="☐" Classes="WindowButton" Click="MaximizeWindow"/>
-                    <Button Name="CloseButton" Content="✕" Classes="WindowButton" Click="CloseWindow"/>
+                    <Button Name="CloseButton" Content="✕" Classes="WindowButton CloseButton" Click="CloseWindow"/>
                 </StackPanel>
             </Grid>
         </Border>
