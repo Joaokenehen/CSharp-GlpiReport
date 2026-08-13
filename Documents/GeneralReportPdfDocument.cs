@@ -107,7 +107,7 @@ public class GeneralReportPdfDocument : IDocument
 
             column.Item().PaddingTop(5).Table(table =>
             {
-                table.ColumnsDefinition(columns => { columns.RelativeColumn(); columns.ConstantColumn(50); });
+                table.ColumnsDefinition(columns => { columns.RelativeColumn(); columns.ConstantColumn(60); });
                 table.Header(header => { header.Cell().Text("Setor").Bold(); header.Cell().AlignRight().Text("Chamados").Bold(); });
                 foreach (var stat in stats) { table.Cell().Text(stat.DepartmentName); table.Cell().AlignRight().Text(stat.TicketCount).Bold(); }
             });
