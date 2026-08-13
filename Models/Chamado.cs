@@ -39,4 +39,7 @@ public class Chamado
 
     [JsonPropertyName("date_assign")]
     public string? DataAtribuicao { get; set; }
+
+    [JsonPropertyName("solve_delay_stat")]
+    public int? TempoParaSolucao { get; set; } // Time to solve in seconds
 }

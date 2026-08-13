@@ -60,6 +60,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isAverageVisible;
     [ObservableProperty]
+    private string _averageSolveTime = "N/A";
+    [ObservableProperty]
     private int _totalBusinessHours;
     [ObservableProperty]
     private int _totalOnDuty;
@@ -127,6 +129,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         FiliaisPercentage = "";
         AverageTicketsPerDay = "N/A";
         IsAverageVisible = false;
+        AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
         ReportSaveName = "";
 
@@ -202,6 +205,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         int solvedCount = 0;
         int pendingCount = 0;
         int newCount = 0;
+        var solveDurationsInSeconds = new List<long>();
         int resolvedTodayCount = 0;
 
         // Helper para parse de data, para ser usado na lógica de plantão
@@ -218,6 +222,12 @@ public partial class GeneralReportsViewModel : ViewModelBase
             if (ticket.Status == 5 || ticket.Status == 6) // Solucionado ou Fechado (criado no período)
             {
                 solvedCount++;
+
+                // Usa o tempo de resolução calculado pelo GLPI, que já desconsidera o tempo pendente.
+                if (ticket.TempoParaSolucao.HasValue && ticket.TempoParaSolucao > 0)
+                {
+                    solveDurationsInSeconds.Add(ticket.TempoParaSolucao.Value);
+                }
             }
             else if (ticket.Status == 4)
             {
@@ -345,6 +355,18 @@ public partial class GeneralReportsViewModel : ViewModelBase
             }
         }
 
+        // Calcula o Tempo Médio de Resolução
+        if (solveDurationsInSeconds.Any())
+        {
+            var averageSeconds = solveDurationsInSeconds.Average();
+            var averageTimeSpan = TimeSpan.FromSeconds(averageSeconds);
+            AverageSolveTime = FormatTimeSpan(averageTimeSpan);
+        }
+        else
+        {
+            AverageSolveTime = "N/A";
+        }
+
         _log.Info("RelatorioGeral", "Estatísticas calculadas:");
         _log.Info("RelatorioGeral", $"  - Abertos no Período: {TotalTicketsFound}");
         _log.Info("RelatorioGeral", $"  - Solucionados/Fechados: {TotalSolved}");
@@ -352,6 +374,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         _log.Info("RelatorioGeral", $"  - Taxa de Resolução: {TaxaResolucaoDia}");
         _log.Info("RelatorioGeral", $"  - Em Plantão: {TotalOnDuty}");
         _log.Info("RelatorioGeral", $"  - Pendentes (do Período): {TotalPending}");
+        _log.Info("RelatorioGeral", $"  - Tempo Médio de Resolução: {AverageSolveTime}");
         _log.Info("RelatorioGeral", $"  - Média Diária: {AverageTicketsPerDay}");
         _log.Info("RelatorioGeral", $"  - Novos: {TotalNew}");
 
@@ -441,6 +464,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         FiliaisPercentage = "";
         AverageTicketsPerDay = "N/A";
         IsAverageVisible = false;
+        AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
         ReportSaveName = "";
 
@@ -490,6 +514,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 TotalSolved = this.TotalSolved,
                 TaxaResolucaoDia = this.TaxaResolucaoDia,
                 TotalBusinessHours = this.TotalBusinessHours,
+                AverageSolveTime = this.AverageSolveTime,
                 AverageTicketsPerDay = this.AverageTicketsPerDay,
                 TotalOnDuty = this.TotalOnDuty,
                 TotalPending = this.TotalPending,
@@ -520,6 +545,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             TotalSolved = state.TotalSolved;
             TaxaResolucaoDia = state.TaxaResolucaoDia;
             TotalBusinessHours = state.TotalBusinessHours;
+            AverageSolveTime = state.AverageSolveTime;
             AverageTicketsPerDay = state.AverageTicketsPerDay;
             TotalOnDuty = state.TotalOnDuty;
             TotalPending = state.TotalPending;
@@ -576,7 +602,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         {
             // 1. Gera o PDF em memória
             var model = new GeneralReportPdfModel(
-                TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay,
+                TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay, AverageSolveTime,
                 MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
                 MatrizStats, AgenciasStats, FiliaisStats);
             var document = new Documents.GeneralReportPdfDocument(model);
@@ -661,7 +687,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             {
                 await using var stream = await file.OpenWriteAsync();
                 var model = new GeneralReportPdfModel(
-                    TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay,
+                    TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay, AverageSolveTime,
                     MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
                     MatrizStats, AgenciasStats, FiliaisStats);
                 var document = new Documents.GeneralReportPdfDocument(model);
@@ -732,6 +758,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         if (IsResolutionRateVisible) stats.Add(new("Taxa de Resolução:", TaxaResolucaoDia));
         if (IsAverageVisible) stats.Add(new("Média Diária de Chamados:", AverageTicketsPerDay));
+        if (AverageSolveTime != "N/A") stats.Add(new("Tempo Médio de Resolução:", AverageSolveTime));
 
         stats.Add(new("Chamados Pendentes:", TotalPending.ToString()));
         stats.Add(new("Chamados Novos:", TotalNew.ToString()));
@@ -785,6 +812,18 @@ public partial class GeneralReportsViewModel : ViewModelBase
         SavedGeneralReports.Clear();
         foreach (var report in reports.OrderByDescending(r => r))
             SavedGeneralReports.Add(report);
+    }
+
+    private string FormatTimeSpan(TimeSpan ts)
+    {
+        var parts = new List<string>();
+        if (ts.Days > 0) parts.Add($"{ts.Days}d");
+        if (ts.Hours > 0) parts.Add($"{ts.Hours}h");
+        if (ts.Minutes > 0) parts.Add($"{ts.Minutes}m");
+
+        if (!parts.Any()) return "< 1 min";
+
+        return string.Join(" ", parts);
     }
 }
 

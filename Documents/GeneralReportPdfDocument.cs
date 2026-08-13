@@ -86,6 +86,8 @@ public class GeneralReportPdfDocument : IDocument
                     ComposeStatRow(table, "Taxa de Resolução:", _model.TaxaResolucaoDia);
                 if (_model.AverageTicketsPerDay != "N/A")
                     ComposeStatRow(table, "Média Diária de Chamados:", _model.AverageTicketsPerDay);
+                if (_model.AverageSolveTime != "N/A")
+                    ComposeStatRow(table, "Tempo Médio de Resolução:", _model.AverageSolveTime);
                 ComposeStatRow(table, "Chamados Pendentes:", _model.TotalPending.ToString());
                 ComposeStatRow(table, "Chamados Novos:", _model.TotalNew.ToString());
             });

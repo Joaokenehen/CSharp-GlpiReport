@@ -181,7 +181,7 @@
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding !IsGenerating}">
                     <StackPanel Spacing="10">
                         <TextBlock Text="Resultados" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto, Auto" VerticalAlignment="Center">
+                        <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto, Auto, Auto, Auto" VerticalAlignment="Center">
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Chamados Abertos no Período:" VerticalAlignment="Center"/>
                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding TotalTicketsFound}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center"/>
@@ -201,11 +201,14 @@
                             <TextBlock Grid.Row="5" Grid.Column="0" Text="Média Diária de Chamados:" VerticalAlignment="Center" IsVisible="{Binding IsAverageVisible}"/>
                             <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding AverageTicketsPerDay}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="#20c997" IsVisible="{Binding IsAverageVisible}"/>
 
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Chamados Pendentes (do Período):" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding TotalPending}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="DarkGoldenrod"/>
+                            <TextBlock Grid.Row="6" Grid.Column="0" Text="Tempo Médio de Resolução:" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding AverageSolveTime}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="#6F42C1"/>
 
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="Chamados Novos (não atribuídos):" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding TotalNew}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Blue"/>
+                            <TextBlock Grid.Row="7" Grid.Column="0" Text="Chamados Pendentes (do Período):" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding TotalPending}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="DarkGoldenrod"/>
+
+                            <TextBlock Grid.Row="8" Grid.Column="0" Text="Chamados Novos (não atribuídos):" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding TotalNew}" FontWeight="Bold" FontSize="16" VerticalAlignment="Center" Foreground="Blue"/>
 
                         </Grid>
                     </StackPanel>
