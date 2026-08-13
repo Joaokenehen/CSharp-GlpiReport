@@ -29,7 +29,7 @@ public class SavedGeneralReportState
     public List<DepartmentStat> AgenciasStats { get; set; } = new();
     public List<DepartmentStat> FiliaisStats { get; set; } = new();
     public List<DepartmentStat> GaragemStats { get; set; } = new();
-    public List<DepartmentStat> EncomendasStats { get; set; } = new();
-    public List<DepartmentStat> AgenciasPropriasStats { get; set; } = new();
+    public List<DepartmentStat> EncomendasStats { get; set; } = new(); // This was already correct
+    public List<DepartmentStat> AgenciasPropriasStats { get; set; } = new(); // This was already correct
     public List<TechnicianStat> TechnicianStats { get; set; } = new();
 }

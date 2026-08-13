@@ -36,17 +36,34 @@
     <Grid RowDefinitions="Auto, *">
         <!-- Barra de Título com botão Voltar e Controles de Janela -->
         <Border Grid.Row="0" Background="White" BoxShadow="0 4 15 0 #0D000000" ZIndex="1">
-            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="40" Name="TitleBar" PointerPressed="TitleBar_PointerPressed" Background="Transparent">
-                <!-- Botão Voltar -->
-                <Button Grid.Column="0" Command="{Binding GoBackCommand}" Background="Transparent" VerticalAlignment="Center" Margin="10,0,0,0">
-                    <PathIcon Data="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" Width="24" Height="24" Foreground="#333"/>
-                </Button>
-
+            <Grid ColumnDefinitions="*,Auto" MinHeight="40" Name="TitleBar" PointerPressed="TitleBar_PointerPressed" Background="Transparent">
                 <!-- Título -->
-                <TextBlock Grid.Column="1" Text="Relatórios Gerais" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0"/>
-
+                <TextBlock Grid.Column="0" Text="Gerador de Relatórios" VerticalAlignment="Center" FontWeight="Bold" FontSize="16" Margin="20,0,0,0" Foreground="#2B3035"/>
                 <!-- Controles da Janela (idênticos ao Dashboard) -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="0,0,10,0">
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <!-- BOTÕES DE NAVEGAÇÃO -->
+                    <Button Content="Dashboard"
+                            Command="{Binding NavigateToDashboardCommand}"
+                            Background="#6c757d"
+                            Foreground="White"
+                            Padding="10,5"
+                            CornerRadius="4"
+                            Margin="0,0,5,0"/>
+                    <Button Content="Relatórios Gerais"
+                            IsEnabled="False"
+                            Background="#343a40"
+                            Foreground="White"
+                            Padding="10,5"
+                            CornerRadius="4"
+                            Margin="0,0,5,0"/>
+                    <Button Content="Relatórios de Técnicos"
+                            Command="{Binding NavigateToTechnicianReportsCommand}"
+                            Background="#6c757d"
+                            Foreground="White"
+                            Padding="10,5"
+                            CornerRadius="4"
+                            Margin="0,0,10,0"/>
+
                     <Button Classes="WindowButton">
                         <PathIcon Data="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61.25 1.17-.59 1.69.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"
                                   Width="16" Height="16"/>
@@ -58,22 +75,28 @@
                                     <MenuItem.ItemTemplate>
                                         <DataTemplate>
                                             <MenuItem Header="{Binding}">
-                                                <MenuItem Header="Carregar"
-                                                          Command="{Binding #RootControl.DataContext.LoadStateAndGoToDashboardCommand}"
-                                                          CommandParameter="{Binding}"/>
-                                                <MenuItem Header="Excluir"
-                                                          Command="{Binding #RootControl.DataContext.DashboardContext.DeleteSavedReportCommand}"
-                                                          CommandParameter="{Binding}"/>
+                                                <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.DashboardContext.LoadDashboardReportCommand}" CommandParameter="{Binding}"/>
+                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DashboardContext.DeleteDashboardReportCommand}" CommandParameter="{Binding}"/>
                                             </MenuItem>
                                         </DataTemplate>
                                     </MenuItem.ItemTemplate>
                                 </MenuItem>
-                                <MenuItem Header="Relatórios Gerais Salvos" ItemsSource="{Binding SavedGeneralReports}">
+                                <MenuItem Header="Relatórios Gerais Salvos" ItemsSource="{Binding DashboardContext.SavedGeneralReports}">
                                     <MenuItem.ItemTemplate>
                                         <DataTemplate>
                                             <MenuItem Header="{Binding}">
                                                 <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.LoadStateCommand}" CommandParameter="{Binding}"/>
-                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DeleteSavedReportCommand}" CommandParameter="{Binding}"/>
+                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DashboardContext.DeleteGeneralReportCommand}" CommandParameter="{Binding}"/>
+                                            </MenuItem>
+                                        </DataTemplate>
+                                    </MenuItem.ItemTemplate>
+                                </MenuItem>
+                                <MenuItem Header="Relatórios de Técnicos Salvos" ItemsSource="{Binding DashboardContext.SavedTechnicianReports}">
+                                    <MenuItem.ItemTemplate>
+                                        <DataTemplate>
+                                            <MenuItem Header="{Binding}">
+                                                <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.DashboardContext.LoadTechnicianReportAndNavigateCommand}" CommandParameter="{Binding}"/>
+                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DashboardContext.DeleteTechnicianReportCommand}" CommandParameter="{Binding}"/>
                                             </MenuItem>
                                         </DataTemplate>
                                     </MenuItem.ItemTemplate>
@@ -355,8 +378,14 @@
                                 <DataTemplate x:DataType="vm:TechnicianStat">
                                     <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,10">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding TechnicianName}" FontWeight="Bold" FontSize="14"/>
-                                            <Grid ColumnDefinitions="*,*,*,*" Margin="0,5,0,0">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Column="0" Text="{Binding FormattedTechnicianName}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1" Content="Ver Detalhes"
+                                                        Command="{Binding DataContext.ShowTechnicianDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Classes="accent" Padding="8,4" FontSize="12"/>
+                                            </Grid>
+                                            <Grid ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
                                                 <StackPanel Grid.Column="0" Spacing="2">
                                                     <TextBlock Text="Solucionados" FontSize="11" Foreground="#6C757D"/>
                                                     <TextBlock Text="{Binding SolvedCount}" FontWeight="SemiBold" FontSize="14"/>

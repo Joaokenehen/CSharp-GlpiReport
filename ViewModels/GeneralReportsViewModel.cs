@@ -24,7 +24,7 @@ using MessageBox.Avalonia.Enums;
 
 namespace RelatorioGLPIApp.ViewModels;
 
-public partial class GeneralReportsViewModel : ViewModelBase
+public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
 {
     private readonly ILogService _log;
     private readonly GlpiConnectionInfo _connectionInfo;
@@ -109,10 +109,14 @@ public partial class GeneralReportsViewModel : ViewModelBase
     [ObservableProperty]
     private string _agenciasPropriasPercentage = "";
 
-    public Action? OnBackToDashboardRequested { get; set; }
+    private List<Chamado> _currentReportTickets = new();
 
     [ObservableProperty]
     private ObservableCollection<TechnicianStat> _technicianStats = new();
+
+    public Action<string, List<Chamado>, bool>? OnShowTechnicianDetailRequested { get; set; }
+    public Action? OnBackToDashboardRequested { get; set; }
+    public Action? OnNavigateToTechnicianReportsRequested { get; set; }
 
     public GeneralReportsViewModel(GlpiConnectionInfo connectionInfo, ILogService logService, DashboardViewModel dashboardContext)
     {
@@ -122,7 +126,6 @@ public partial class GeneralReportsViewModel : ViewModelBase
         _chamadoService = connectionInfo.ChamadoService;
         _generalReportStateService = new GeneralReportStateService();
 
-        _ = LoadSavedReportsList();
     }
 
     [RelayCommand]
@@ -145,14 +148,14 @@ public partial class GeneralReportsViewModel : ViewModelBase
         AgenciasPercentage = "";
         FiliaisStats.Clear();
         FiliaisPercentage = "";
-        AverageTicketsPerDay = "N/A";
-        IsAverageVisible = false;
         GaragemStats.Clear();
         GaragemPercentage = "";
         EncomendasStats.Clear();
         EncomendasPercentage = "";
         AgenciasPropriasStats.Clear();
         AgenciasPropriasPercentage = "";
+        AverageTicketsPerDay = "N/A";
+        IsAverageVisible = false;
         TechnicianStats.Clear();
         AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
@@ -171,7 +174,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
             if (allTickets.Any())
             {
-                ProcessTickets(allTickets, true);
+                _currentReportTickets = ProcessTickets(allTickets, true);
                 GenerationStatus = $"Relatório gerado com sucesso. {TotalTicketsFound} chamados encontrados no período.";
             }
             else
@@ -190,7 +193,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         }
     }
 
-    private void ProcessTickets(List<Chamado> allTickets, bool filterForToday)
+    private List<Chamado> ProcessTickets(List<Chamado> allTickets, bool filterForToday)
     {
         _log.Info("RelatorioGeral", $"Iniciando processamento. Filtro de hoje: {filterForToday}. Total de chamados: {allTickets.Count}.");
 
@@ -232,14 +235,6 @@ public partial class GeneralReportsViewModel : ViewModelBase
         int newCount = 0;
         var solveDurationsInSeconds = new List<long>();
         int resolvedTodayCount = 0;
-
-        // Helper para parse de data, para ser usado na lógica de plantão
-        DateTime? ParseDate(string? dateStr)
-        {
-            if (string.IsNullOrWhiteSpace(dateStr)) return null;
-            if (DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt)) return dt.ToUniversalTime();
-            return null;
-        }
 
         foreach (var ticket in ticketsToProcess)
         {
@@ -385,7 +380,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
             }
 
             TechnicianStats.Add(new TechnicianStat(
-                System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' ')), // Nome do técnico formatado
+                techName, // RawTechnicianName
+                System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' ')), // FormattedTechnicianName
                 techSolvedCount,
                 resolutionRate,
                 onDutySolvedCount,
@@ -397,6 +393,14 @@ public partial class GeneralReportsViewModel : ViewModelBase
         // 3. CÁLCULO POR SETOR
         _log.Info("RelatorioGeral", "Calculando estatísticas por setor...");
 
+        // Clear previous stats
+        MatrizStats.Clear();
+        AgenciasStats.Clear();
+        FiliaisStats.Clear();
+        GaragemStats.Clear();
+        EncomendasStats.Clear();
+        AgenciasPropriasStats.Clear();
+
         var ticketsMatriz = new List<Chamado>();
         var ticketsAgencias = new List<Chamado>();
         var ticketsFiliais = new List<Chamado>();
@@ -406,24 +410,26 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         foreach (var ticket in ticketsToProcess)
         {
-            string entidade = WebUtility.HtmlDecode(ticket.Entidade ?? "Matriz");
-            // A ordem é importante para a classificação correta, do mais específico para o mais geral.
-            if (entidade.Contains("Garagem", StringComparison.OrdinalIgnoreCase))
+            string entidade = WebUtility.HtmlDecode(ticket.Entidade ?? "Matriz").Trim();
+
+            // Prioridade na classificação: do mais específico para o mais geral
+            if (entidade.Contains("Agências Próprias", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias Proprias", StringComparison.OrdinalIgnoreCase))
             {
-                ticketsGaragem.Add(ticket);
+                ticketsAgenciasProprias.Add(ticket);
             }
             else if (entidade.Contains("Encomendas", StringComparison.OrdinalIgnoreCase))
             {
                 ticketsEncomendas.Add(ticket);
             }
-            else if (entidade.Contains("Agências Próprias", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias Proprias", StringComparison.OrdinalIgnoreCase))
+            else if (entidade.Contains("Garagem", StringComparison.OrdinalIgnoreCase))
             {
-                ticketsAgenciasProprias.Add(ticket);
+                ticketsGaragem.Add(ticket);
             }
             else if (entidade.Contains("Agências", StringComparison.OrdinalIgnoreCase) || entidade.Contains("Agencias", StringComparison.OrdinalIgnoreCase))
             {
                 ticketsAgencias.Add(ticket);
             }
+            // Verifica se a entidade contém "Filiais"
             else if (entidade.Contains("Filiais", StringComparison.OrdinalIgnoreCase))
             {
                 ticketsFiliais.Add(ticket);
@@ -434,32 +440,15 @@ public partial class GeneralReportsViewModel : ViewModelBase
             }
         }
 
-        // Função para processar um grupo de tickets e popular a coleção de estatísticas
-        void ProcessGroup(List<Chamado> groupTickets, ObservableCollection<DepartmentStat> collection)
-        {
-            var stats = groupTickets
-                .Select(t =>
-                {
-                    // Extrai o nome do setor da entidade
-                    string setor = WebUtility.HtmlDecode(t.Entidade ?? "Matriz").Split('>').Last().Trim();
-                    // REGRA DE NEGÓCIO: Se o setor for "Setor", renomeia para "Arrecadação".
-                    if (setor.Equals("Setor", StringComparison.OrdinalIgnoreCase)) return "Arrecadação";
-                    return setor;
-                })
-                .GroupBy(setor => setor)
-                .Select(g => new DepartmentStat(g.Key, g.Count()))
-                .OrderByDescending(s => s.TicketCount)
-                .ToList();
+        // Helper function to process a group of tickets and populate the stats collection
+        void ProcessDepartmentGroup(List<Chamado> groupTickets, ObservableCollection<DepartmentStat> collection) { var stats = groupTickets.Select(t => { string setor = WebUtility.HtmlDecode(t.Entidade ?? "Matriz").Split('>').Last().Trim(); if (setor.Equals("Setor", StringComparison.OrdinalIgnoreCase)) return "Arrecadação"; return setor; }).GroupBy(setor => setor).Select(g => new DepartmentStat(g.Key, g.Count())).OrderByDescending(s => s.TicketCount).ToList(); collection.Clear(); foreach (var stat in stats) collection.Add(stat); }
 
-            foreach (var stat in stats) collection.Add(stat);
-        }
-
-        ProcessGroup(ticketsMatriz, MatrizStats);
-        ProcessGroup(ticketsAgencias, AgenciasStats);
-        ProcessGroup(ticketsFiliais, FiliaisStats);
-        ProcessGroup(ticketsGaragem, GaragemStats);
-        ProcessGroup(ticketsEncomendas, EncomendasStats);
-        ProcessGroup(ticketsAgenciasProprias, AgenciasPropriasStats);
+        ProcessDepartmentGroup(ticketsMatriz, MatrizStats);
+        ProcessDepartmentGroup(ticketsAgencias, AgenciasStats);
+        ProcessDepartmentGroup(ticketsFiliais, FiliaisStats);
+        ProcessDepartmentGroup(ticketsGaragem, GaragemStats);
+        ProcessDepartmentGroup(ticketsEncomendas, EncomendasStats);
+        ProcessDepartmentGroup(ticketsAgenciasProprias, AgenciasPropriasStats);
 
         if (TotalTicketsFound > 0)
         {
@@ -484,6 +473,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
                                    $"Garagem: {GaragemStats.Count} setores {GaragemPercentage}. " +
                                    $"Encomendas: {EncomendasStats.Count} setores {EncomendasPercentage}. " +
                                    $"Ag. Próprias: {AgenciasPropriasStats.Count} setores {AgenciasPropriasPercentage}.");
+
+        return ticketsToProcess;
     }
 
     [RelayCommand]
@@ -506,14 +497,14 @@ public partial class GeneralReportsViewModel : ViewModelBase
         AgenciasPercentage = "";
         FiliaisStats.Clear();
         FiliaisPercentage = "";
-        AverageTicketsPerDay = "N/A";
-        IsAverageVisible = false;
         GaragemStats.Clear();
         GaragemPercentage = "";
         EncomendasStats.Clear();
         EncomendasPercentage = "";
         AgenciasPropriasStats.Clear();
         AgenciasPropriasPercentage = "";
+        AverageTicketsPerDay = "N/A";
+        IsAverageVisible = false;
         TechnicianStats.Clear();
         AverageSolveTime = "N/A";
         IsResolutionRateVisible = false;
@@ -524,7 +515,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(_connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken, default, default);
             GenerationStatus = $"Processando todos os {allTickets.Count} chamados...";
             await Task.Delay(100);
-            ProcessTickets(allTickets, false);
+            _currentReportTickets = ProcessTickets(allTickets, false);
             GenerationStatus = $"Relatório completo gerado com sucesso. {TotalTicketsFound} chamados encontrados.";
         }
         catch (Exception ex)
@@ -586,7 +577,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
             };
 
             await _generalReportStateService.SaveState(state, ReportSaveName);
-            await LoadSavedReportsList();
+            await DashboardContext.RefreshAllSavedReports();
             ReportSaveName = "";
         }
     }
@@ -651,7 +642,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         if (result == ButtonResult.Yes)
         {
             await _generalReportStateService.DeleteState(reportId);
-            await LoadSavedReportsList();
+            await DashboardContext.RefreshAllSavedReports();
         }
     }
 
@@ -717,20 +708,15 @@ public partial class GeneralReportsViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task LoadStateAndGoToDashboard(string? reportId)
+    private void NavigateToDashboard()
     {
-        // Este comando permite carregar um relatório salvo a partir desta tela
-        if (DashboardContext?.LoadStateCommand.CanExecute(reportId) ?? false)
-        {
-            await DashboardContext.LoadStateCommand.ExecuteAsync(reportId);
-            OnBackToDashboardRequested?.Invoke();
-        }
+        OnBackToDashboardRequested?.Invoke();
     }
 
     [RelayCommand]
-    private void GoBack()
+    private void NavigateToTechnicianReports()
     {
-        OnBackToDashboardRequested?.Invoke();
+        OnNavigateToTechnicianReportsRequested?.Invoke();
     }
 
     [RelayCommand]
@@ -761,8 +747,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
                     TotalTicketsFound, TotalSolved, TotalBusinessHours, TotalOnDuty, TaxaResolucaoDia, TotalPending, TotalNew, AverageTicketsPerDay, AverageSolveTime,
                     MatrizPercentage, AgenciasPercentage, FiliaisPercentage,
                     GaragemPercentage, EncomendasPercentage, AgenciasPropriasPercentage,
-                MatrizStats, AgenciasStats, FiliaisStats,
-                GaragemStats, EncomendasStats, AgenciasPropriasStats,
+                    MatrizStats, AgenciasStats, FiliaisStats,
+                    GaragemStats, EncomendasStats, AgenciasPropriasStats,
                     TechnicianStats);
                 var document = new Documents.GeneralReportPdfDocument(model);
                 document.GeneratePdf(stream);
@@ -816,11 +802,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
     private void GerarConteudoWord(DocX document)
     {
         document.InsertParagraph("Relatório Geral de Chamados").Bold().FontSize(20).Alignment = Alignment.center;
-        document.InsertParagraph($"Dados referentes ao dia: {DateTime.Now:dd/MM/yyyy}").FontSize(12).Alignment = Alignment.center;
-        document.InsertParagraph();
 
         document.InsertParagraph("Resumo do Período").Bold().FontSize(14);
-        var statsTable = document.AddTable(7, 2);
 
         var stats = new List<KeyValuePair<string, string>>
         {
@@ -837,15 +820,9 @@ public partial class GeneralReportsViewModel : ViewModelBase
         stats.Add(new("Chamados Pendentes:", TotalPending.ToString()));
         stats.Add(new("Chamados Novos:", TotalNew.ToString()));
 
+        var statsTable = document.AddTable(stats.Count, 2);
         statsTable.Design = TableDesign.TableGrid;
         statsTable.AutoFit = AutoFit.Contents;
-        statsTable.Rows[0].Cells[0].Paragraphs.First().Append("Chamados Abertos no Período:").Append(TotalTicketsFound.ToString()).Bold();
-        statsTable.Rows[1].Cells[0].Paragraphs.First().Append("Chamados Solucionados/Fechados:").Append(TotalSolved.ToString()).Bold();
-        statsTable.Rows[2].Cells[0].Paragraphs.First().Append("Chamados em Expediente Normal:").Append(TotalBusinessHours.ToString()).Bold();
-        statsTable.Rows[3].Cells[0].Paragraphs.First().Append("Chamados em Horário de Plantão:").Append(TotalOnDuty.ToString()).Bold();
-        statsTable.Rows[4].Cells[0].Paragraphs.First().Append("Taxa de Resolução:").Append(TaxaResolucaoDia).Bold();
-        statsTable.Rows[5].Cells[0].Paragraphs.First().Append("Chamados Pendentes:").Append(TotalPending.ToString()).Bold();
-        statsTable.Rows[6].Cells[0].Paragraphs.First().Append("Chamados Novos:").Append(TotalNew.ToString()).Bold();
         for (int i = 0; i < stats.Count; i++)
         {
             statsTable.Rows[i].Cells[0].Paragraphs.First().Append(stats[i].Key);
@@ -885,8 +862,8 @@ public partial class GeneralReportsViewModel : ViewModelBase
             techTable.Rows[0].Cells[2].Paragraphs.First().Append("Taxa Res.").Bold();
             techTable.Rows[0].Cells[3].Paragraphs.First().Append("Plantão").Bold();
             techTable.Rows[0].Cells[4].Paragraphs.First().Append("T. Médio").Bold();
-            int techRowIndex = 1;
-            foreach (var stat in TechnicianStats) { techTable.Rows[techRowIndex].Cells[0].Paragraphs.First().Append(stat.TechnicianName); techTable.Rows[techRowIndex].Cells[1].Paragraphs.First().Append(stat.SolvedCount.ToString()); techTable.Rows[techRowIndex].Cells[2].Paragraphs.First().Append(stat.ResolutionRate); techTable.Rows[techRowIndex].Cells[3].Paragraphs.First().Append(stat.OnDutySolvedCount.ToString()); techTable.Rows[techRowIndex++].Cells[4].Paragraphs.First().Append(stat.AverageSolveTime); }
+            int techRowIndex = 1; // Start from 1 because row 0 is header
+            foreach (var stat in TechnicianStats) { techTable.Rows[techRowIndex].Cells[0].Paragraphs.First().Append(stat.FormattedTechnicianName); techTable.Rows[techRowIndex].Cells[1].Paragraphs.First().Append(stat.SolvedCount.ToString()); techTable.Rows[techRowIndex].Cells[2].Paragraphs.First().Append(stat.ResolutionRate); techTable.Rows[techRowIndex].Cells[3].Paragraphs.First().Append(stat.OnDutySolvedCount.ToString()); techTable.Rows[techRowIndex++].Cells[4].Paragraphs.First().Append(stat.AverageSolveTime); }
             document.InsertTable(techTable);
             document.InsertParagraph();
         }
@@ -897,14 +874,6 @@ public partial class GeneralReportsViewModel : ViewModelBase
         return Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
             ? desktop.MainWindow
             : null;
-    }
-
-    private async Task LoadSavedReportsList()
-    {
-        var reports = await _generalReportStateService.GetSavedReportIds();
-        SavedGeneralReports.Clear();
-        foreach (var report in reports.OrderByDescending(r => r))
-            SavedGeneralReports.Add(report);
     }
 
     private string FormatTimeSpan(TimeSpan ts)
@@ -919,7 +888,7 @@ public partial class GeneralReportsViewModel : ViewModelBase
         return string.Join(" ", parts);
     }
 
-    private bool IsTicketOnDuty(Chamado ticket, bool filterForToday)
+    public bool IsTicketOnDuty(Chamado ticket, bool filterForToday)
     {
         // Helper para parse de data, para ser usado na lógica de plantão
         DateTime? ParseDate(string? dateStr)
@@ -971,12 +940,28 @@ public partial class GeneralReportsViewModel : ViewModelBase
         }
         return false;
     }
+
+    [RelayCommand]
+    private void ShowTechnicianDetail(TechnicianStat? technician)
+    {
+        if (technician == null)
+        {
+            _log.Erro("Navigation", "Comando ShowTechnicianDetail foi chamado com um técnico nulo.");
+            return;
+        }
+        _log.Info("Navigation", $"Comando ShowTechnicianDetail executado para o técnico: {technician.RawTechnicianName}. Disparando evento...");
+
+        // A flag 'IsResolutionRateVisible' nos diz se o relatório atual é o do dia ou o completo.
+        bool isDailyReport = IsResolutionRateVisible;
+        OnShowTechnicianDetailRequested?.Invoke(technician.RawTechnicianName, _currentReportTickets, isDailyReport);
+    }
 }
 
 public record DepartmentStat(string DepartmentName, int TicketCount);
 
 public record TechnicianStat(
-    string TechnicianName,
+    string RawTechnicianName,
+    string FormattedTechnicianName,
     int SolvedCount,
     string ResolutionRate,
     int OnDutySolvedCount,

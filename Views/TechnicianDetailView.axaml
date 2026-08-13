@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RelatorioGLPIApp.ViewModels"
+             xmlns:m="using:RelatorioGLPIApp.Models"
+             x:Class="RelatorioGLPIApp.Views.TechnicianDetailView"
+             x:DataType="vm:TechnicianDetailViewModel"
+             Background="#F3F4F6">
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Barra de Título com botão Voltar -->
+        <Border Grid.Row="0" Background="White" BoxShadow="0 4 15 0 #0D000000" ZIndex="1">
+            <Grid ColumnDefinitions="Auto, *" MinHeight="40">
+                <!-- Botão Voltar -->
+                <Button Grid.Column="0" Command="{Binding GoBackCommand}" Background="Transparent" VerticalAlignment="Center" Margin="10,0,0,0">
+                    <PathIcon Data="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" Width="24" Height="24" Foreground="#333"/>
+                </Button>
+
+                <!-- Título -->
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="10,0">
+                    <Run Text="Detalhes do Técnico: "/>
+                    <Run Text="{Binding TechnicianName}" FontWeight="Normal"/>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <!-- Conteúdo Principal -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="10" Margin="30">
+                <TextBlock Text="Chamados Solucionados" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                <ItemsControl ItemsSource="{Binding SolvedTickets}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="m:TechnicianDetailTicket">
+                            <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,8">
+                                <Grid ColumnDefinitions="Auto, *, Auto">
+                                    <TextBlock Grid.Column="0" Text="{Binding Id, StringFormat='ID: {0}'}" FontWeight="Bold" Width="80" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="2" Background="{Binding Type, Converter={StaticResource TicketTypeToColorConverter}}" CornerRadius="4" Padding="8,4">
+                                        <TextBlock Text="{Binding Type}" FontSize="12" FontWeight="Bold" Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="Nenhum chamado solucionado encontrado para este técnico."
+                           IsVisible="{Binding !SolvedTickets.Count}"
+                           Foreground="#6C757D"
+                           HorizontalAlignment="Center"
+                           Margin="0,20"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

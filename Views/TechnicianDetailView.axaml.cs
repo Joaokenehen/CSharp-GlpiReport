@@ -1,11 +1,10 @@
 using Avalonia.Controls;
-using RelatorioGLPIApp.ViewModels;
 
 namespace RelatorioGLPIApp.Views;
 
-public partial class MainWindow : Window
+public partial class TechnicianDetailView : UserControl
 {
-    public MainWindow()
+    public TechnicianDetailView()
     {
         InitializeComponent();
     }

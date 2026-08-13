@@ -126,7 +126,7 @@ public class GeneralReportPdfDocument : IDocument
             {
                 table.ColumnsDefinition(columns => { columns.RelativeColumn(); columns.ConstantColumn(60); });
                 table.Header(header => { header.Cell().Text("Setor").Bold(); header.Cell().AlignRight().Text("Chamados").Bold(); });
-                foreach (var stat in stats) { table.Cell().Text(stat.DepartmentName); table.Cell().AlignRight().Text(stat.TicketCount).Bold(); }
+                foreach (var stat in stats) { table.Cell().Text(stat.DepartmentName); table.Cell().AlignRight().Text(stat.TicketCount.ToString()).Bold(); }
             });
         });
     }
@@ -157,7 +157,7 @@ public class GeneralReportPdfDocument : IDocument
                     header.Cell().AlignCenter().Text("T. Médio").Bold();
                 });
 
-                foreach (var stat in stats) { table.Cell().Text(stat.TechnicianName); table.Cell().AlignCenter().Text(stat.SolvedCount); table.Cell().AlignCenter().Text(stat.ResolutionRate); table.Cell().AlignCenter().Text(stat.OnDutySolvedCount); table.Cell().AlignCenter().Text(stat.AverageSolveTime); }
+                foreach (var stat in stats) { table.Cell().Text(stat.FormattedTechnicianName); table.Cell().AlignCenter().Text(stat.SolvedCount.ToString()); table.Cell().AlignCenter().Text(stat.ResolutionRate); table.Cell().AlignCenter().Text(stat.OnDutySolvedCount.ToString()); table.Cell().AlignCenter().Text(stat.AverageSolveTime); }
             });
         });
     }

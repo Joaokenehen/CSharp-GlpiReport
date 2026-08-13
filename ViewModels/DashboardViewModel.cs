@@ -32,6 +32,8 @@ public partial class DashboardViewModel : ViewModelBase
     private readonly string _sessionToken;
     private readonly IChamadoService _chamadoService;
     private readonly IReportStateService _reportStateService;
+    private readonly IGeneralReportStateService _generalReportStateService;
+    private readonly ITechnicianReportStateService _technicianReportStateService;
 
     private readonly ILogService _log;
     private List<Chamado> _todosOsChamados;
@@ -73,9 +75,19 @@ public partial class DashboardViewModel : ViewModelBase
     [ObservableProperty]
     private ObservableCollection<string> _savedReports = new();
 
+    [ObservableProperty]
+    private ObservableCollection<string> _savedGeneralReports = new();
+
+    [ObservableProperty]
+    private ObservableCollection<string> _savedTechnicianReports = new();
+
     public Action? OnLogoutRequested { get; set; }
     public Action? OnNavigateToGeneralReportsRequested { get; set; }
+    public Action? OnNavigateToTechnicianReportsRequested { get; set; }
     public Action<RelatorioItem>? OnItemAdded { get; set; }
+
+    public Action<string?>? OnLoadGeneralReportAndNavigateRequested { get; set; }
+    public Action<string?>? OnLoadTechnicianReportAndNavigateRequested { get; set; }
 
     public DashboardViewModel(GlpiConnectionInfo connectionInfo)
     {
@@ -86,14 +98,15 @@ public partial class DashboardViewModel : ViewModelBase
         _sessionToken = connectionInfo.SessionToken;
         _chamadoService = connectionInfo.ChamadoService;
         _reportStateService = new ReportStateService();
+        _generalReportStateService = new GeneralReportStateService();
+        _technicianReportStateService = new TechnicianReportStateService();
         _todosOsChamados = connectionInfo.InitialChamados;
 
         Relatorios = new ObservableCollection<RelatorioItem>();
 
         AplicarFiltrosNaLista();
 
-        // Carrega a lista de relatórios salvos
-        _ = LoadSavedReportsList();
+        _ = RefreshAllSavedReports();
     }
 
     private void AplicarFiltrosNaLista()
@@ -404,6 +417,12 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void NavigateToTechnicianReports()
+    {
+        OnNavigateToTechnicianReportsRequested?.Invoke();
+    }
+
+    [RelayCommand]
     private void Sair()
     {
         OnLogoutRequested?.Invoke();
@@ -457,7 +476,7 @@ public partial class DashboardViewModel : ViewModelBase
 
                 await _reportStateService.SaveState(state, finalFileName);
                 await ShowNotificationAsync($"Relatório '{ReportSaveName}' salvo com sucesso!");
-                await LoadSavedReportsList(); // Atualiza a lista no menu
+                await RefreshAllSavedReports(); // Atualiza a lista no menu
                 ReportSaveName = ""; // Limpa o campo após salvar
             }
             catch (Exception ex)
@@ -469,7 +488,7 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task LoadState(string? reportId)
+    private async Task LoadDashboardReport(string? reportId)
     {
         if (string.IsNullOrWhiteSpace(reportId)) return;
 
@@ -513,7 +532,7 @@ public partial class DashboardViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task DeleteSavedReport(string? reportId)
+    private async Task DeleteDashboardReport(string? reportId)
     {
         if (string.IsNullOrWhiteSpace(reportId)) return;
 
@@ -527,9 +546,49 @@ public partial class DashboardViewModel : ViewModelBase
         if (result == ButtonResult.Yes)
         {
             await _reportStateService.DeleteState(reportId);
-            await LoadSavedReportsList();
+            await RefreshAllSavedReports();
             await ShowNotificationAsync($"Relatório '{reportId}' excluído com sucesso!");
         }
+    }
+
+    [RelayCommand]
+    private async Task DeleteGeneralReport(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+        var result = await MessageBoxManager.GetMessageBoxStandard("Excluir Relatório", $"Tem certeza que deseja excluir o relatório geral '{reportId}'?", ButtonEnum.YesNo, Icon.Warning).ShowAsync();
+        if (result == ButtonResult.Yes)
+        {
+            await _generalReportStateService.DeleteState(reportId);
+            await RefreshAllSavedReports();
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteTechnicianReport(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+        var result = await MessageBoxManager.GetMessageBoxStandard("Excluir Relatório", $"Tem certeza que deseja excluir o relatório de técnico '{reportId}'?", ButtonEnum.YesNo, Icon.Warning).ShowAsync();
+        if (result == ButtonResult.Yes)
+        {
+            await _technicianReportStateService.DeleteState(reportId);
+            await RefreshAllSavedReports();
+        }
+    }
+
+    [RelayCommand]
+    private void LoadGeneralReportAndNavigate(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+        _log.Info("Navigation", $"Solicitando carregamento e navegação para Relatório Geral: {reportId}");
+        OnLoadGeneralReportAndNavigateRequested?.Invoke(reportId);
+    }
+
+    [RelayCommand]
+    private void LoadTechnicianReportAndNavigate(string? reportId)
+    {
+        if (string.IsNullOrWhiteSpace(reportId)) return;
+        _log.Info("Navigation", $"Solicitando carregamento e navegação para Relatório de Técnico: {reportId}");
+        OnLoadTechnicianReportAndNavigateRequested?.Invoke(reportId);
     }
 
     [RelayCommand]
@@ -745,11 +804,21 @@ public partial class DashboardViewModel : ViewModelBase
         TotalItensSolucionados = Relatorios.Count(r => r.StatusTag == "Solucionado" || r.StatusTag == "Fechado");
     }
 
-    private async Task LoadSavedReportsList()
+    public async Task RefreshAllSavedReports()
     {
-        var reports = await _reportStateService.GetSavedReportIds();
+        var dashboardReports = await _reportStateService.GetSavedReportIds();
         SavedReports.Clear();
-        foreach (var report in reports.OrderByDescending(r => r))
+        foreach (var report in dashboardReports.OrderByDescending(r => r))
             SavedReports.Add(report);
+
+        var generalReports = await _generalReportStateService.GetSavedReportIds();
+        SavedGeneralReports.Clear();
+        foreach (var report in generalReports.OrderByDescending(r => r))
+            SavedGeneralReports.Add(report);
+
+        var technicianReports = await _technicianReportStateService.GetSavedReportIds();
+        SavedTechnicianReports.Clear();
+        foreach (var report in technicianReports.OrderByDescending(r => r))
+            SavedTechnicianReports.Add(report);
     }
 }

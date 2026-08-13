@@ -1,0 +1,236 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:RelatorioGLPIApp.ViewModels"
+             x:Class="RelatorioGLPIApp.Views.TechnicianReportsView"
+             x:DataType="vm:TechnicianReportsViewModel"
+             x:Name="RootControl"
+             Background="#F3F4F6">
+
+    <UserControl.Styles>
+        <Style Selector="Button.WindowButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#495057"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.WindowButton:pointerover">
+            <Setter Property="Background" Value="#E9ECEF"/>
+        </Style>
+        <Style Selector="Button.ActionButton">
+            <Setter Property="Background" Value="#F8F9FA"/>
+            <Setter Property="BorderBrush" Value="#DEE2E6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto, *">
+        <!-- Barra de Título com botão Voltar -->
+        <Border Grid.Row="0" Background="White" BoxShadow="0 4 15 0 #0D000000" ZIndex="1">
+            <Grid ColumnDefinitions="*,Auto" MinHeight="40" Name="TitleBar" PointerPressed="TitleBar_PointerPressed" Background="Transparent">
+                <!-- Título -->
+                <TextBlock Grid.Column="0" Text="Gerador de Relatórios" VerticalAlignment="Center" FontWeight="Bold" FontSize="16" Margin="20,0,0,0" Foreground="#2B3035"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <!-- BOTÕES DE NAVEGAÇÃO -->
+                    <Button Content="Dashboard"
+                            Command="{Binding NavigateToDashboardCommand}"
+                            Background="#6c757d"
+                            Foreground="White"
+                            Padding="10,5"
+                            CornerRadius="4"
+                            Margin="0,0,5,0"/>
+                    <Button Content="Relatórios Gerais"
+                            Command="{Binding NavigateToGeneralReportsCommand}"
+                            Background="#6c757d"
+                            Foreground="White"
+                            Padding="10,5"
+                            CornerRadius="4"
+                            Margin="0,0,5,0"/>
+                    <Button Content="Relatórios de Técnicos"
+                            IsEnabled="False"
+                            Background="#343a40"
+                            Foreground="White"
+                            Padding="10,5"
+                            CornerRadius="4"
+                            Margin="0,0,10,0"/>
+
+                    <!-- Controles da Janela -->
+                    <Button Classes="WindowButton">
+                        <PathIcon Data="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19-.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61.25 1.17-.59 1.69.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"
+                                  Width="16" Height="16"/>
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuItem Header="Sair" Command="{Binding DashboardContext.SairCommand}"/>
+                                <Separator />
+                                <MenuItem Header="Relatórios do Dia Salvos" ItemsSource="{Binding DashboardContext.SavedReports}">
+                                    <MenuItem.ItemTemplate>
+                                        <DataTemplate>
+                                            <MenuItem Header="{Binding}" >
+                                                <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.DashboardContext.LoadDashboardReportCommand}" CommandParameter="{Binding}" />
+                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DashboardContext.DeleteDashboardReportCommand}" CommandParameter="{Binding}" />
+                                            </MenuItem>
+                                        </DataTemplate>
+                                    </MenuItem.ItemTemplate>
+                                </MenuItem>
+                                <MenuItem Header="Relatórios Gerais Salvos" ItemsSource="{Binding DashboardContext.SavedGeneralReports}">
+                                    <MenuItem.ItemTemplate>
+                                        <DataTemplate>
+                                            <MenuItem Header="{Binding}">
+                                                <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.DashboardContext.LoadGeneralReportAndNavigateCommand}" CommandParameter="{Binding}"/>
+                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DashboardContext.DeleteGeneralReportCommand}" CommandParameter="{Binding}"/>
+                                            </MenuItem>
+                                        </DataTemplate>
+                                    </MenuItem.ItemTemplate>
+                                </MenuItem>
+                                <MenuItem Header="Relatórios de Técnicos Salvos" ItemsSource="{Binding DashboardContext.SavedTechnicianReports}">
+                                    <MenuItem.ItemTemplate>
+                                        <DataTemplate>
+                                            <MenuItem Header="{Binding}" >
+                                                <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.LoadStateCommand}" CommandParameter="{Binding}" />
+                                                <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DashboardContext.DeleteTechnicianReportCommand}" CommandParameter="{Binding}" />
+                                            </MenuItem>
+                                        </DataTemplate>
+                                    </MenuItem.ItemTemplate>
+                                </MenuItem>
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Border Background="#DEE2E6" Width="1" Margin="0,8" VerticalAlignment="Stretch"/>
+                    <Button Name="MinimizeButton" Content="—" Classes="WindowButton" Click="MinimizeWindow"/>
+                    <Button Name="MaximizeButton" Content="☐" Classes="WindowButton" Click="MaximizeWindow"/>
+                    <Button Name="CloseButton" Content="✕" Classes="WindowButton" Click="CloseWindow"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Conteúdo Principal -->
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Spacing="20" Margin="30">
+
+                <!-- Ações -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000">
+                    <StackPanel Spacing="15">
+                        <TextBlock Text="Gerar Relatório de Produtividade" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <Grid ColumnDefinitions="*,Auto" Grid.ColumnSpan="20">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
+                                <Button IsEnabled="{Binding !IsGenerating}" Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1" Foreground="#495057" Padding="12,8" CornerRadius="6" FontWeight="SemiBold">
+                                    <TextBlock Text="Exportar"/>
+                                    <Button.Flyout>
+                                        <MenuFlyout>
+                                            <MenuItem Header="Gerar PDF" Command="{Binding ExportarPdfCommand}"/>
+                                            <MenuItem Header="Gerar Word" Command="{Binding ExportarWordCommand}"/>
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
+
+                                <Button Classes="ActionButton WindowButton" ToolTip.Tip="Salvar Relatório" IsEnabled="{Binding !IsGenerating}">
+                                    <PathIcon Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" Width="20" Height="20"/>
+                                    <Button.Flyout>
+                                        <Flyout Placement="Bottom">
+                                            <StackPanel Spacing="10" Margin="10">
+                                                <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
+                                                <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório de Técnicos Semanal" MinWidth="250"/>
+                                                <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch" Classes="accent"/>
+                                                <Panel IsVisible="{Binding SavedTechnicianReports.Count}">
+                                                    <StackPanel>
+                                                        <Separator Margin="0,10"/>
+                                                        <TextBlock Text="Ou clique em um nome recente para usar:" FontSize="12" Foreground="#6C757D" Margin="0,0,0,5"/>
+                                                        <ScrollViewer MaxHeight="150">
+                                                            <ItemsControl ItemsSource="{Binding SavedTechnicianReports}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Button Command="{Binding #RootControl.DataContext.UseSavedReportNameCommand}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="5,3">
+                                                                            <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" Foreground="#0078D4"/>
+                                                                        </Button>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </ScrollViewer>
+                                                    </StackPanel>
+                                                </Panel>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+
+                                <Button Classes="ActionButton WindowButton" ToolTip.Tip="Imprimir Relatório" IsEnabled="{Binding !IsGenerating}" Command="{Binding PrintReportCommand}">
+                                    <PathIcon Data="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z" Width="20" Height="20"/>
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                                <Button Command="{Binding GenerateReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#0078D4" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold" ToolTip.Tip="Gera o relatório com os dados de hoje.">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2v-7h2v7zm4 0h-2v-7h2v7z" Width="16" Height="16"/>
+                                        <TextBlock Text="Relatório do Dia" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding GenerateFullReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#20c997" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold" ToolTip.Tip="Gera o relatório com TODOS os chamados do GLPI. Pode demorar.">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" Width="16" Height="16"/>
+                                        <TextBlock Text="Relatório Completo" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Status e Progresso -->
+                <StackPanel Spacing="5" IsVisible="{Binding IsGenerating}">
+                    <ProgressBar IsIndeterminate="True"/>
+                    <TextBlock Text="{Binding GenerationStatus}" HorizontalAlignment="Center" Foreground="#555"/>
+                </StackPanel>
+                <TextBlock Text="{Binding GenerationStatus}" IsVisible="{Binding !IsGenerating}" HorizontalAlignment="Center" Foreground="#555"/>
+
+
+                <!-- Produtividade por Técnico -->
+                <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding TechnicianStats.Count}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Produtividade por Técnico" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <ItemsControl ItemsSource="{Binding TechnicianStats}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TechnicianStat">
+                                    <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,10">
+                                        <StackPanel>
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Column="0" Text="{Binding FormattedTechnicianName}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1" Content="Ver Detalhes"
+                                                        Command="{Binding DataContext.ShowTechnicianDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}"
+                                                        Classes="accent" Padding="8,4" FontSize="12"/>
+                                            </Grid>
+                                            <Grid ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
+                                                <StackPanel Grid.Column="0" Spacing="2">
+                                                    <TextBlock Text="Solucionados" FontSize="11" Foreground="#6C757D"/>
+                                                    <TextBlock Text="{Binding SolvedCount}" FontWeight="SemiBold" FontSize="14"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Spacing="2">
+                                                    <TextBlock Text="Taxa de Resolução" FontSize="11" Foreground="#6C757D"/>
+                                                    <TextBlock Text="{Binding ResolutionRate}" FontWeight="SemiBold" FontSize="14" Foreground="#0078D4"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" Spacing="2">
+                                                    <TextBlock Text="Resolvidos (Plantão)" FontSize="11" Foreground="#6C757D"/>
+                                                    <TextBlock Text="{Binding OnDutySolvedCount}" FontWeight="SemiBold" FontSize="14" Foreground="Orange"/>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3" Spacing="2">
+                                                    <TextBlock Text="Tempo Médio" FontSize="11" Foreground="#6C757D"/>
+                                                    <TextBlock Text="{Binding AverageSolveTime}" FontWeight="SemiBold" FontSize="14" Foreground="#6F42C1"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -44,9 +44,23 @@
                 <Grid Grid.Row="0" ColumnDefinitions="*,Auto" MinHeight="40" Name="TitleBar" PointerPressed="TitleBar_PointerPressed" Background="Transparent">
                     <TextBlock Grid.Column="0" Text="Gerador de Relatórios" VerticalAlignment="Center" FontWeight="Bold" FontSize="16" Margin="20,0,0,0" Foreground="#2B3035"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" Margin="0,0,10,0">
-                        <!-- BOTÃO PARA NAVEGAR PARA RELATÓRIOS GERAIS -->
+                        <!-- BOTÕES DE NAVEGAÇÃO -->
+                        <Button Content="Dashboard"
+                                IsEnabled="False"
+                                Background="#343a40"
+                                Foreground="White"
+                                Padding="10,5"
+                                CornerRadius="4"
+                                Margin="0,0,5,0"/>
                         <Button Content="Relatórios Gerais"
                                 Command="{Binding NavigateToGeneralReportsCommand}"
+                                Background="#6c757d"
+                                Foreground="White"
+                                Padding="10,5"
+                                CornerRadius="4"
+                                Margin="0,0,5,0"/>
+                        <Button Content="Relatórios de Técnicos"
+                                Command="{Binding NavigateToTechnicianReportsCommand}"
                                 Background="#6c757d"
                                 Foreground="White"
                                 Padding="10,5"
@@ -65,13 +79,30 @@
                                             <DataTemplate>
                                                 <!-- O Header é o nome do arquivo, o CommandParameter também -->
                                                 <MenuItem Header="{Binding}">
-                                                    <MenuItem Header="Carregar"
-                                                              Command="{Binding #RootControl.DataContext.LoadStateCommand}"
-                                                              CommandParameter="{Binding}"/>
-                                                    <MenuItem Header="Excluir"
-                                                              Command="{Binding #RootControl.DataContext.DeleteSavedReportCommand}"
-                                                              CommandParameter="{Binding}"/>
-                                                </MenuItem>                                            </DataTemplate>
+                                                    <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.LoadDashboardReportCommand}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DeleteDashboardReportCommand}" CommandParameter="{Binding}"/>
+                                                </MenuItem>
+                                            </DataTemplate>
+                                        </MenuItem.ItemTemplate>
+                                    </MenuItem>
+                                    <MenuItem Header="Relatórios Gerais Salvos" ItemsSource="{Binding SavedGeneralReports}">
+                                        <MenuItem.ItemTemplate>
+                                            <DataTemplate>
+                                                <MenuItem Header="{Binding}">
+                                                    <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.LoadGeneralReportAndNavigateCommand}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DeleteGeneralReportCommand}" CommandParameter="{Binding}"/>
+                                                </MenuItem>
+                                            </DataTemplate>
+                                        </MenuItem.ItemTemplate>
+                                    </MenuItem>
+                                    <MenuItem Header="Relatórios de Técnicos Salvos" ItemsSource="{Binding SavedTechnicianReports}">
+                                        <MenuItem.ItemTemplate>
+                                            <DataTemplate>
+                                                <MenuItem Header="{Binding}">
+                                                    <MenuItem Header="Carregar" Command="{Binding #RootControl.DataContext.LoadTechnicianReportAndNavigateCommand}" CommandParameter="{Binding}"/>
+                                                    <MenuItem Header="Excluir" Command="{Binding #RootControl.DataContext.DeleteTechnicianReportCommand}" CommandParameter="{Binding}"/>
+                                                </MenuItem>
+                                            </DataTemplate>
                                         </MenuItem.ItemTemplate>
                                     </MenuItem>
                                 </MenuFlyout>

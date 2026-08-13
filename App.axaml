@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="RelatorioGLPIApp.App"
              xmlns:local="using:RelatorioGLPIApp"
+             xmlns:converters="using:RelatorioGLPIApp.Converters"
              RequestedThemeVariant="Light">
     <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
@@ -12,4 +13,9 @@
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
+
+    <Application.Resources>
+        <converters:TicketTypeToColorConverter x:Key="TicketTypeToColorConverter"/>
+    </Application.Resources>
+
 </Application>
