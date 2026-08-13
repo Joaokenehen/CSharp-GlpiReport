@@ -258,7 +258,7 @@ public class ChamadoService : IChamadoService
 
     public async Task<List<Chamado>> ObterChamadosParaRelatorioGeralAsync(string urlBase, string appToken, string sessionToken, DateTimeOffset startDate, DateTimeOffset endDate)
     {
-        _log.Info("API_GERAL", "Iniciando busca COMPLETA de todos os dados do GLPI com paginação...");
+        _log.Info("API_GERAL", "Iniciando busca de dados do GLPI com paginação...");
 
         using var client = new HttpClient();
         client.DefaultRequestHeaders.Add("App-Token", appToken);
@@ -270,9 +270,31 @@ public class ChamadoService : IChamadoService
             NumberHandling = JsonNumberHandling.AllowReadingFromString
         };
 
+        // Constrói a URL base para a busca de tickets
+        string ticketBaseUrl = $"{urlBase.TrimEnd('/')}/Ticket?expand_dropdowns=true&sort=id&order=ASC";
+
+        // Adiciona o critério de data se um período válido for fornecido
+        if (startDate != default && endDate != default)
+        {
+            _log.Info("API_GERAL", $"Aplicando filtro de data na API: de {startDate:g} a {endDate:g}");
+            var startDateString = startDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            var endDateString = endDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            ticketBaseUrl += $"&criteria[0][field]=2" + // 2 = date (data de criação)
+                             $"&criteria[0][searchtype]=morethan" +
+                             $"&criteria[0][value]={startDateString}" +
+                             $"&criteria[1][field]=2" +
+                             $"&criteria[1][searchtype]=lessthan" +
+                             $"&criteria[1][value]={endDateString}" +
+                             $"&search_op=AND";
+        }
+        else
+        {
+            _log.Info("API_GERAL", "Buscando TODOS os chamados (sem filtro de data na API).");
+        }
+
         // 1. Busca todos os dados necessários com paginação
         var userMap = await GetUserMapAsync(client, urlBase, jsonOptions);
-        var chamados = await FetchAllPaginatedAsync<Chamado>(client, $"{urlBase.TrimEnd('/')}/Ticket?expand_dropdowns=true&sort=id&order=ASC", jsonOptions);
+        var chamados = await FetchAllPaginatedAsync<Chamado>(client, ticketBaseUrl, jsonOptions);
         var atores = await FetchAllTicketUsersPaginatedAsync(client, $"{urlBase.TrimEnd('/')}/Ticket_User?sort=id&order=ASC", jsonOptions);
         var solucoes = await FetchAllPaginatedAsync<Solution>(client, $"{urlBase.TrimEnd('/')}/ITILSolution?sort=id&order=ASC", jsonOptions);
         var followups = await FetchAllPaginatedAsync<Followup>(client, $"{urlBase.TrimEnd('/')}/ITILFollowup?sort=id&order=ASC", jsonOptions);

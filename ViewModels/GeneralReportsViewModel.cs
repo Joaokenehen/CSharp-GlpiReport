@@ -123,9 +123,11 @@ public partial class GeneralReportsViewModel : ViewModelBase
 
         try
         {
-            // O serviço busca todos os chamados, o filtro para "hoje" será local.
-            var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(
-                _connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken, default, default);
+            // MUDANÇA: Para o relatório do dia, usamos o método rápido que busca os chamados
+            // mais recentes (igual ao dashboard), em vez de paginar por toda a base de dados.
+            // A filtragem para o dia de hoje é feita localmente no método ProcessTickets.
+            var allTickets = await _chamadoService.ObterChamadosAsync(
+                _connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken);
 
             GenerationStatus = $"Processando {allTickets.Count} chamados...";
             await Task.Delay(100); // Permite que a UI atualize a mensagem
@@ -189,6 +191,14 @@ public partial class GeneralReportsViewModel : ViewModelBase
         int newCount = 0;
         int resolvedTodayCount = 0;
 
+        // Helper para parse de data, para ser usado na lógica de plantão
+        DateTime? ParseDate(string? dateStr)
+        {
+            if (string.IsNullOrWhiteSpace(dateStr)) return null;
+            if (DateTime.TryParse(dateStr, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dt)) return dt.ToUniversalTime();
+            return null;
+        }
+
         foreach (var ticket in ticketsToProcess)
         {
             // Contagem de status
@@ -205,28 +215,73 @@ public partial class GeneralReportsViewModel : ViewModelBase
                 newCount++; // Novo
             }
 
+            bool isTicketOnDuty = false;
+            if (filterForToday)
+            {
+                // LÓGICA ROBUSTA PARA O RELATÓRIO DO DIA (igual ao Dashboard)
+                var dataCriacao = ParseDate(ticket.DataCriacao);
+                var dataSolucao = ParseDate(ticket.DataSolucao);
+                var dataModificacao = ParseDate(ticket.DataModificacao);
+                var dataAtribuicao = ParseDate(ticket.DataAtribuicao);
+
+                var diaSelecionadoLocal = DateTime.Today;
+                DateTimeOffset inicioPlantaoLocal;
+                if (diaSelecionadoLocal.DayOfWeek == DayOfWeek.Monday)
+                    inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-3).AddHours(18);
+                else
+                    inicioPlantaoLocal = diaSelecionadoLocal.AddDays(-1).AddHours(18);
+
+                var fimPlantaoLocal = diaSelecionadoLocal.AddHours(7).AddMinutes(30);
+                var inicioAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(11).AddMinutes(30);
+                var fimAlmocoPlantaoLocal = diaSelecionadoLocal.AddHours(13).AddMinutes(30);
+
+                var inicioPlantaoUtc = inicioPlantaoLocal.ToUniversalTime();
+                var fimPlantaoUtc = fimPlantaoLocal.ToUniversalTime();
+                var inicioAlmocoPlantaoUtc = inicioAlmocoPlantaoLocal.ToUniversalTime();
+                var fimAlmocoPlantaoUtc = fimAlmocoPlantaoLocal.ToUniversalTime();
+
+                bool IsInOnDutyWindow(DateTime? date)
+                {
+                    if (!date.HasValue) return false;
+                    return (date.Value >= inicioPlantaoUtc && date.Value < fimPlantaoUtc) ||
+                           (date.Value >= inicioAlmocoPlantaoUtc && date.Value < fimAlmocoPlantaoUtc);
+                }
+
+                if (IsInOnDutyWindow(dataCriacao) || IsInOnDutyWindow(dataSolucao) || IsInOnDutyWindow(dataModificacao) || IsInOnDutyWindow(dataAtribuicao))
+                {
+                    isTicketOnDuty = true;
+                }
+            }
+            else
+            {
+                // LÓGICA SIMPLIFICADA PARA O RELATÓRIO COMPLETO (baseado na data de criação)
+                if (DateTime.TryParse(ticket.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacaoLocal))
+                {
+                    var time = dataCriacaoLocal.TimeOfDay;
+                    var dayOfWeek = dataCriacaoLocal.DayOfWeek;
+
+                    bool isNightShift = time >= TimeSpan.FromHours(18) || time < TimeSpan.FromHours(7.5);
+                    bool isLunchShift = time >= TimeSpan.FromHours(11.5) && time < TimeSpan.FromHours(13.5);
+                    bool isWeekend = dayOfWeek == DayOfWeek.Saturday || dayOfWeek == DayOfWeek.Sunday;
+
+                    if (isNightShift || isLunchShift || isWeekend)
+                    {
+                        isTicketOnDuty = true;
+                    }
+                }
+            }
+
+            if (isTicketOnDuty)
+            {
+                onDutyCount++;
+            }
+
             // Contagem para Taxa de Resolução: Chamados abertos hoje E resolvidos/fechados hoje
             if ((ticket.Status == 5 || ticket.Status == 6) &&
                 filterForToday && ((DateTime.TryParse(ticket.DataSolucao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataSolucaoLocal) && dataSolucaoLocal.Date == DateTime.Today) ||
                  (DateTime.TryParse(ticket.DataFechamento, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataFechamentoLocal) && dataFechamentoLocal.Date == DateTime.Today)))
             {
                 resolvedTodayCount++;
-            }
-
-            // Contagem de chamados de plantão (lógica simplificada baseada na data de criação)
-            if (DateTime.TryParse(ticket.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacaoLocal))
-            {
-                var time = dataCriacaoLocal.TimeOfDay;
-                var dayOfWeek = dataCriacaoLocal.DayOfWeek;
-
-                bool isNightShift = time >= TimeSpan.FromHours(18) || time < TimeSpan.FromHours(7.5);
-                bool isLunchShift = time >= TimeSpan.FromHours(11.5) && time < TimeSpan.FromHours(13.5);
-                bool isWeekend = dayOfWeek == DayOfWeek.Saturday || dayOfWeek == DayOfWeek.Sunday;
-
-                if (isNightShift || isLunchShift || isWeekend)
-                {
-                    onDutyCount++;
-                }
             }
         }
 
