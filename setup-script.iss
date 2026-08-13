@@ -1,5 +1,5 @@
 #define MyAppName "Gerador de Relatórios GLPI"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.5.0"
 #define MyAppPublisher "João Gustavo"
 #define MyAppExeName "RelatorioGLPIApp.exe"
 
