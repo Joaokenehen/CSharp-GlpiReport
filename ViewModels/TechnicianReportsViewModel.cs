@@ -135,33 +135,65 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
         }
     }
 
+    // Este método é uma cópia adaptada do GeneralReportsViewModel.ProcessTickets
+    // para garantir que a lógica de cálculo dos técnicos seja idêntica.
     private List<Chamado> ProcessTechnicianTickets(List<Chamado> allTickets, bool filterForToday)
     {
+        _log.Info("RelatorioTecnicos", $"Iniciando processamento. Filtro de hoje: {filterForToday}. Total de chamados: {allTickets.Count}.");
+
         List<Chamado> ticketsToProcess;
+
         if (filterForToday)
         {
             var reportStartDate = DateTime.Today;
             var reportEndDate = DateTime.Today.AddDays(1);
-            ticketsToProcess = allTickets.Where(t => { if (DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacao)) { return dataCriacao >= reportStartDate && dataCriacao < reportEndDate; } return false; }).ToList();
+            ticketsToProcess = allTickets.Where(t =>
+            {
+                if (DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacao))
+                {
+                    return dataCriacao >= reportStartDate && dataCriacao < reportEndDate;
+                }
+                return false;
+            }).ToList();
+            _log.Info("RelatorioTecnicos", $"{ticketsToProcess.Count} chamados encontrados criados hoje.");
         }
         else
         {
             ticketsToProcess = allTickets;
+            _log.Info("RelatorioTecnicos", $"Processando todos os {allTickets.Count} chamados (sem filtro de data).");
         }
 
+        int totalTicketsFoundInPeriod = ticketsToProcess.Count;
+
+        // CÁLCULO POR TÉCNICO
         _log.Info("RelatorioTecnicos", "Calculando produtividade por técnico...");
         TechnicianStats.Clear();
 
-        var allTechnicians = ticketsToProcess.Where(t => !string.IsNullOrWhiteSpace(t.TecnicoAtribuido)).SelectMany(t => t.TecnicoAtribuido!.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(n => n.Trim())).Distinct().OrderBy(name => name).ToList();
+        var allTechnicians = ticketsToProcess
+            .Where(t => !string.IsNullOrWhiteSpace(t.TecnicoAtribuido))
+            .SelectMany(t => t.TecnicoAtribuido!.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(n => n.Trim()))
+            .Distinct()
+            .OrderBy(name => name)
+            .ToList();
 
         foreach (var techName in allTechnicians)
         {
-            var techTickets = ticketsToProcess.Where(t => t.TecnicoAtribuido != null && t.TecnicoAtribuido.Contains(techName, StringComparison.OrdinalIgnoreCase)).ToList();
+            var techTickets = ticketsToProcess
+                .Where(t => t.TecnicoAtribuido != null && t.TecnicoAtribuido.Contains(techName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
             var solvedByTech = techTickets.Where(t => t.Status == 5 || t.Status == 6).ToList();
             int techSolvedCount = solvedByTech.Count;
-            string resolutionRate = (ticketsToProcess.Count > 0) ? $"{(double)techSolvedCount / ticketsToProcess.Count:P0}" : "0%";
+
+            // A taxa de resolução é baseada no total de chamados do período processado.
+            string resolutionRate = (totalTicketsFoundInPeriod > 0) ? $"{(double)techSolvedCount / totalTicketsFoundInPeriod:P0}" : "0%";
+
             int onDutySolvedCount = solvedByTech.Count(t => IsTicketOnDuty(t, filterForToday));
-            var techSolveDurations = solvedByTech.Where(t => t.TempoParaSolucao.HasValue && t.TempoParaSolucao > 0).Select(t => t.TempoParaSolucao!.Value).ToList();
+
+            var techSolveDurations = solvedByTech
+                .Where(t => t.TempoParaSolucao.HasValue && t.TempoParaSolucao > 0)
+                .Select(t => t.TempoParaSolucao!.Value)
+                .ToList();
 
             string avgSolveTime = "N/A";
             if (techSolveDurations.Any())
@@ -170,7 +202,14 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
                 avgSolveTime = FormatTimeSpan(TimeSpan.FromSeconds(averageSeconds));
             }
 
-            TechnicianStats.Add(new TechnicianStat(techName, CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' ')), techSolvedCount, resolutionRate, onDutySolvedCount, avgSolveTime));
+            TechnicianStats.Add(new TechnicianStat(
+                techName, // RawTechnicianName
+                CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' ')), // FormattedTechnicianName
+                techSolvedCount,
+                resolutionRate,
+                onDutySolvedCount,
+                avgSolveTime
+            ));
         }
         _log.Info("RelatorioTecnicos", $"{TechnicianStats.Count} técnicos encontrados e analisados.");
 

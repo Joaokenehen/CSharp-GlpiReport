@@ -46,6 +46,36 @@
         </Style>
     </UserControl.Styles>
 
+    <UserControl.Resources>
+        <DataTemplate x:Key="TechnicianStatTemplate" x:DataType="vm:TechnicianStat">
+            <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,10">
+                <StackPanel>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding FormattedTechnicianName}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Content="Ver Detalhes"
+                                Command="{Binding DataContext.ShowTechnicianDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Classes="accent" Padding="8,4" FontSize="12"/>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Text="{Binding SolvedCount}" FontWeight="SemiBold" FontSize="14"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Text="{Binding ResolutionRate}" FontWeight="SemiBold" FontSize="14" Foreground="#0078D4"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="{Binding OnDutySolvedCount}" FontWeight="SemiBold" FontSize="14" Foreground="Orange"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Spacing="2">
+                            <TextBlock Text="{Binding AverageSolveTime}" FontWeight="SemiBold" FontSize="14" Foreground="#6F42C1"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid RowDefinitions="Auto, *">
         <!-- Barra de Título com botão Voltar e Controles de Janela -->
         <Border Grid.Row="0" Background="White" BoxShadow="0 4 15 0 #0D000000" ZIndex="1">
@@ -423,37 +453,7 @@
                             </Button>
                         </Grid>
 
-                        <ItemsControl ItemsSource="{Binding TechnicianStats}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:TechnicianStat">
-                                    <Border BorderBrush="#EEE" BorderThickness="0,0,0,1" Padding="0,10">
-                                        <StackPanel>
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <TextBlock Grid.Column="0" Text="{Binding FormattedTechnicianName}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center"/>
-                                                <Button Grid.Column="1" Content="Ver Detalhes"
-                                                        Command="{Binding DataContext.ShowTechnicianDetailCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                        CommandParameter="{Binding}"
-                                                        Classes="accent" Padding="8,4" FontSize="12"/>
-                                            </Grid>
-                                            <Grid ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
-                                                <StackPanel Grid.Column="0" Spacing="2">
-                                                    <TextBlock Text="{Binding SolvedCount}" FontWeight="SemiBold" FontSize="14"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock Text="{Binding ResolutionRate}" FontWeight="SemiBold" FontSize="14" Foreground="#0078D4"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="2" Spacing="2">
-                                                    <TextBlock Text="{Binding OnDutySolvedCount}" FontWeight="SemiBold" FontSize="14" Foreground="Orange"/>
-                                                </StackPanel>
-                                                <StackPanel Grid.Column="3" Spacing="2">
-                                                    <TextBlock Text="{Binding AverageSolveTime}" FontWeight="SemiBold" FontSize="14" Foreground="#6F42C1"/>
-                                                </StackPanel>
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ItemsControl ItemsSource="{Binding TechnicianStats}" ItemTemplate="{StaticResource TechnicianStatTemplate}"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
