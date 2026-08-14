@@ -1,5 +1,5 @@
 #define MyAppName "Gerador de Relatórios GLPI"
-#define MyAppVersion "1.5.0"
+#define MyAppVersion "1.5.1"
 #define MyAppPublisher "João Gustavo"
 #define MyAppExeName "RelatorioGLPIApp.exe"
 
@@ -9,10 +9,11 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher="{#MyAppPublisher}"
 DefaultDirName={autopf}\{#MyAppName}
+SetupIconFile=.\Assets\logocsharp.ico
 DisableProgramGroupPage=yes
 CloseApplications=yes
 OutputDir=C:\Users\joaot\Desktop\Projetos\RelatorioGLPIApp\Installer
-OutputBaseFilename=setup-relatorio-glpi-v1.1.0
+OutputBaseFilename=setup-relatorio-glpi-v1.5.1
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

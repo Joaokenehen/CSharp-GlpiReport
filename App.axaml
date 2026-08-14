@@ -19,6 +19,8 @@
         <converters:BooleanToChevronConverter x:Key="BooleanToChevronConverter"/>
         <converters:IsPrivateToColorConverter x:Key="IsPrivateToColorConverter"/>
         <converters:IsPrivateToBackgroundConverter x:Key="IsPrivateToBackgroundConverter"/>
+        <converters:IsEqualConverter x:Key="IsEqualConverter"/>
+        <converters:SortDirectionToIconConverter x:Key="SortDirectionToIconConverter"/>
     </Application.Resources>
 
 </Application>

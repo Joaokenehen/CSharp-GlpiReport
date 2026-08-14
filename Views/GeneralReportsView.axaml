@@ -31,6 +31,19 @@
             <Setter Property="BorderBrush" Value="#DEE2E6"/>
             <Setter Property="BorderThickness" Value="1"/>
         </Style>
+        <Style Selector="Button.SortHeaderButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#6C757D"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+        <Style Selector="Button.SortHeaderButton:pointerover">
+            <Setter Property="Background" Value="#E9ECEF"/>
+        </Style>
     </UserControl.Styles>
 
     <Grid RowDefinitions="Auto, *">
@@ -373,6 +386,43 @@
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding TechnicianStats.Count}">
                     <StackPanel Spacing="10">
                         <TextBlock Text="Produtividade por Técnico" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                        <!-- Cabeçalhos de Ordenação -->
+                        <Grid ColumnDefinitions="*,*,*,*" Margin="0,0,0,5">
+                            <Button Grid.Column="0" Classes="SortHeaderButton" Command="{Binding SortTechniciansCommand}" CommandParameter="SolvedCount">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="Solucionados"/>
+                                    <PathIcon Width="12" Height="12" VerticalAlignment="Center"
+                                              IsVisible="{Binding CurrentSortColumn, Converter={StaticResource IsEqualConverter}, ConverterParameter=SolvedCount}"
+                                              Data="{Binding IsSortAscending, Converter={StaticResource SortDirectionToIconConverter}}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="1" Classes="SortHeaderButton" Command="{Binding SortTechniciansCommand}" CommandParameter="ResolutionRate">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="Taxa de Resolução"/>
+                                    <PathIcon Width="12" Height="12" VerticalAlignment="Center"
+                                              IsVisible="{Binding CurrentSortColumn, Converter={StaticResource IsEqualConverter}, ConverterParameter=ResolutionRate}"
+                                              Data="{Binding IsSortAscending, Converter={StaticResource SortDirectionToIconConverter}}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="2" Classes="SortHeaderButton" Command="{Binding SortTechniciansCommand}" CommandParameter="OnDutySolvedCount">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="Resolvidos (Plantão)"/>
+                                    <PathIcon Width="12" Height="12" VerticalAlignment="Center"
+                                              IsVisible="{Binding CurrentSortColumn, Converter={StaticResource IsEqualConverter}, ConverterParameter=OnDutySolvedCount}"
+                                              Data="{Binding IsSortAscending, Converter={StaticResource SortDirectionToIconConverter}}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Column="3" Classes="SortHeaderButton" Command="{Binding SortTechniciansCommand}" CommandParameter="AverageSolveTime">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <TextBlock Text="Tempo Médio"/>
+                                    <PathIcon Width="12" Height="12" VerticalAlignment="Center"
+                                              IsVisible="{Binding CurrentSortColumn, Converter={StaticResource IsEqualConverter}, ConverterParameter=AverageSolveTime}"
+                                              Data="{Binding IsSortAscending, Converter={StaticResource SortDirectionToIconConverter}}"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+
                         <ItemsControl ItemsSource="{Binding TechnicianStats}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TechnicianStat">
@@ -387,19 +437,15 @@
                                             </Grid>
                                             <Grid ColumnDefinitions="*,*,*,*" Margin="0,8,0,0">
                                                 <StackPanel Grid.Column="0" Spacing="2">
-                                                    <TextBlock Text="Solucionados" FontSize="11" Foreground="#6C757D"/>
                                                     <TextBlock Text="{Binding SolvedCount}" FontWeight="SemiBold" FontSize="14"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Spacing="2">
-                                                    <TextBlock Text="Taxa de Resolução" FontSize="11" Foreground="#6C757D"/>
                                                     <TextBlock Text="{Binding ResolutionRate}" FontWeight="SemiBold" FontSize="14" Foreground="#0078D4"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2" Spacing="2">
-                                                    <TextBlock Text="Resolvidos (Plantão)" FontSize="11" Foreground="#6C757D"/>
                                                     <TextBlock Text="{Binding OnDutySolvedCount}" FontWeight="SemiBold" FontSize="14" Foreground="Orange"/>
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="3" Spacing="2">
-                                                    <TextBlock Text="Tempo Médio" FontSize="11" Foreground="#6C757D"/>
                                                     <TextBlock Text="{Binding AverageSolveTime}" FontWeight="SemiBold" FontSize="14" Foreground="#6F42C1"/>
                                                 </StackPanel>
                                             </Grid>

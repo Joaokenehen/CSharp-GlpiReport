@@ -45,6 +45,12 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
     [ObservableProperty]
     private ObservableCollection<string> _savedTechnicianReports = new();
 
+    [ObservableProperty]
+    private TechnicianSortColumn _currentSortColumn = TechnicianSortColumn.SolvedCount;
+
+    [ObservableProperty]
+    private bool _isSortAscending = false;
+
     public DashboardViewModel DashboardContext { get; }
 
     private List<Chamado> _currentReportTickets = new();
@@ -167,6 +173,10 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
             TechnicianStats.Add(new TechnicianStat(techName, CultureInfo.CurrentCulture.TextInfo.ToTitleCase(techName.Replace('.', ' ')), techSolvedCount, resolutionRate, onDutySolvedCount, avgSolveTime));
         }
         _log.Info("RelatorioTecnicos", $"{TechnicianStats.Count} técnicos encontrados e analisados.");
+
+        // Aplica a ordenação padrão
+        SortTechnicians(TechnicianSortColumn.SolvedCount.ToString());
+
         return ticketsToProcess;
     }
 
@@ -441,5 +451,68 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
             return isNightShift || isLunchShift || isWeekend;
         }
         return false;
+    }
+
+    [RelayCommand]
+    private void SortTechnicians(string? column)
+    {
+        if (!Enum.TryParse<TechnicianSortColumn>(column, true, out var sortBy))
+        {
+            return;
+        }
+
+        if (sortBy == CurrentSortColumn)
+        {
+            IsSortAscending = !IsSortAscending;
+        }
+        else
+        {
+            CurrentSortColumn = sortBy;
+            IsSortAscending = false; // Padrão: decrescente para nova coluna
+        }
+
+        var statsToSort = TechnicianStats.ToList();
+        IEnumerable<TechnicianStat> sortedStats;
+
+        switch (CurrentSortColumn)
+        {
+            case TechnicianSortColumn.SolvedCount:
+                sortedStats = IsSortAscending ? statsToSort.OrderBy(s => s.SolvedCount) : statsToSort.OrderByDescending(s => s.SolvedCount);
+                break;
+            case TechnicianSortColumn.ResolutionRate:
+                sortedStats = IsSortAscending ? statsToSort.OrderBy(s => double.Parse(s.ResolutionRate.TrimEnd('%'))) : statsToSort.OrderByDescending(s => double.Parse(s.ResolutionRate.TrimEnd('%')));
+                break;
+            case TechnicianSortColumn.OnDutySolvedCount:
+                sortedStats = IsSortAscending ? statsToSort.OrderBy(s => s.OnDutySolvedCount) : statsToSort.OrderByDescending(s => s.OnDutySolvedCount);
+                break;
+            case TechnicianSortColumn.AverageSolveTime:
+                sortedStats = IsSortAscending ? statsToSort.OrderBy(s => ParseAverageSolveTime(s.AverageSolveTime)) : statsToSort.OrderByDescending(s => ParseAverageSolveTime(s.AverageSolveTime));
+                break;
+            default:
+                sortedStats = IsSortAscending ? statsToSort.OrderBy(s => s.FormattedTechnicianName) : statsToSort.OrderByDescending(s => s.FormattedTechnicianName);
+                break;
+        }
+
+        TechnicianStats.Clear();
+        foreach (var stat in sortedStats)
+        {
+            TechnicianStats.Add(stat);
+        }
+    }
+
+    private TimeSpan ParseAverageSolveTime(string timeStr)
+    {
+        if (timeStr == "N/A") return TimeSpan.MaxValue;
+        if (timeStr == "< 1 min") return TimeSpan.FromSeconds(30);
+
+        var totalTime = TimeSpan.Zero;
+        var parts = timeStr.Split(' ');
+        foreach (var part in parts)
+        {
+            if (part.EndsWith("d")) totalTime = totalTime.Add(TimeSpan.FromDays(double.Parse(part.TrimEnd('d'))));
+            else if (part.EndsWith("h")) totalTime = totalTime.Add(TimeSpan.FromHours(double.Parse(part.TrimEnd('h'))));
+            else if (part.EndsWith("m")) totalTime = totalTime.Add(TimeSpan.FromMinutes(double.Parse(part.TrimEnd('m'))));
+        }
+        return totalTime;
     }
 }

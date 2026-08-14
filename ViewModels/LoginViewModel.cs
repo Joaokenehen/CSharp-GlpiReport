@@ -16,7 +16,7 @@ public partial class LoginViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
 
     [ObservableProperty]
-    private string _urlGlpi = "https://suporte.expnordeste.com.br/apirest.php"; // Colocar URl do seu GLPI
+    private string _urlGlpi = "";
 
     [ObservableProperty]
     private string _userToken = "";
