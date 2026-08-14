@@ -2,6 +2,12 @@
 
 Um aplicativo desktop moderno, focado em performance e produtividade, construído para facilitar a extração, visualização e análise de dados de chamados do sistema **GLPI** através de sua API REST.
 
+## Download
+
+Você pode baixar a versão mais recente do aplicativo diretamente da página de **Releases**:
+
+**[Baixar a Última Versão](https://github.com/SEU-USUARIO/RelatorioGLPIApp/releases/latest)**
+
 ## Tecnologias e Arquitetura
 
 O projeto foi desenvolvido focando em boas práticas de engenharia de software e separação de responsabilidades:
@@ -39,7 +45,7 @@ O projeto foi desenvolvido focando em boas práticas de engenharia de software e
 
 1.  Clone este repositório:
     ```bash
-    git clone https://github.com/SEU-USUARIO/RelatorioGLPIApp.git
+    git clone https://github.com/Joaokenehen/RelatorioGLPIApp.git
     ```
 2.  Navegue até o diretório do projeto:
     ```bash
