@@ -6,7 +6,7 @@ Um aplicativo desktop moderno, focado em performance e produtividade, construíd
 
 Você pode baixar a versão mais recente do aplicativo diretamente da página de **Releases**:
 
-**[Baixar a Última Versão](https://github.com/SEU-USUARIO/RelatorioGLPIApp/releases/latest)**
+**[Baixar a Última Versão](https://github.com/Joaokenehen/CSharp-GlpiReport/releases/tag/v1.5.2)**
 
 ## Tecnologias e Arquitetura
 
