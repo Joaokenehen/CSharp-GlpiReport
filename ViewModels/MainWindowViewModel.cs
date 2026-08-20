@@ -23,7 +23,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _hasUpdate;
 
     [ObservableProperty]
-    private string _updateMessage;
+
+    private string _updateMessage = null!;
 
     [ObservableProperty]
     private string _updateUrl = string.Empty;
