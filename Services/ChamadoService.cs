@@ -22,146 +22,80 @@ public class ChamadoService : IChamadoService
     {
         try
         {
-            _log.Info("API", "Buscando chamados recentes no GLPI...");
+            _log.Info("API_DIARIO", "Buscando últimos 200 chamados no GLPI (Carregamento Rápido)...");
 
-            using var client = new HttpClient();
-            client.DefaultRequestHeaders.Add("App-Token", appToken);
-            client.DefaultRequestHeaders.Add("Session-Token", sessionToken);
+            using var client = CriarHttpClient(appToken, sessionToken);
+            var jsonOptions = CriarJsonOptions();
 
-            var jsonOptions = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true,
-                NumberHandling = JsonNumberHandling.AllowReadingFromString
-            };
-
-            // NOVO: 0. Busca todos os usuários para mapear ID -> Nome de usuário (login)
             var userMap = await GetUserMapAsync(client, urlBase, jsonOptions);
 
-            // 1. Busca os chamados principais
-            // ALTERADO: Ordena por data de modificação para capturar chamados antigos que foram solucionados/fechados hoje.
+            // 1. Busca APENAS os últimos 200 chamados (Sem paginação, muito rápido)
             string endpointChamados = $"{urlBase.TrimEnd('/')}/Ticket?expand_dropdowns=true&sort=date_mod&order=DESC&range=0-200";
             HttpResponseMessage respChamados = await client.GetAsync(endpointChamados);
+            if (!respChamados.IsSuccessStatusCode) return new List<Chamado>();
 
-            if (!respChamados.IsSuccessStatusCode)
-            {
-                _log.Erro("API", $"Erro ao buscar chamados: {respChamados.StatusCode}");
-                return new List<Chamado>();
-            }
+            var chamados = JsonSerializer.Deserialize<List<Chamado>>(await respChamados.Content.ReadAsStringAsync(), jsonOptions) ?? new List<Chamado>();
 
-            string jsonChamados = await respChamados.Content.ReadAsStringAsync();
-            var chamados = JsonSerializer.Deserialize<List<Chamado>>(jsonChamados, jsonOptions) ?? new List<Chamado>();
-
-            // 2. Busca a tabela de Atores (Ticket_User) para pegar o ID do Técnico Atribuído (Type == 2)
-            _log.Info("API", "Buscando os técnicos atribuídos aos chamados...");
-            // CORREÇÃO: Busca as associações mais recentes. A ordenação DESC é crucial para encontrar os técnicos dos chamados recentes.
+            // 2. Busca APENAS os últimos 1000 atores 
             string endpointAtores = $"{urlBase.TrimEnd('/')}/Ticket_User?sort=id&order=DESC&range=0-1000";
-            HttpResponseMessage respAtores = await client.GetAsync(endpointAtores);
+            var respAtores = await client.GetAsync(endpointAtores);
+            var atores = respAtores.IsSuccessStatusCode ? ParseTicketUsers(await respAtores.Content.ReadAsStringAsync()) : new List<TicketUser>();
 
-            if (respAtores.IsSuccessStatusCode)
-            {
-                string jsonAtores = await respAtores.Content.ReadAsStringAsync();
-                var atores = ParseTicketUsers(jsonAtores);
-
-                foreach (var chamado in chamados)
-                {
-                    // Procura por TODOS os atores do tipo "atribuído" (type 2)
-                    var tecnicosAtribuidos = atores.Where(a =>
-                        a.TicketsId.HasValue && a.TicketsId.Value == chamado.Id && a.Type == 2);
-
-                    var nomesDosTecnicos = new List<string>();
-                    foreach (var tecnico in tecnicosAtribuidos)
-                    {
-                        // Se encontrarmos o técnico e seu ID, usamos o mapa para obter o nome de login
-                        if (!string.IsNullOrEmpty(tecnico.UsersId) && userMap.TryGetValue(tecnico.UsersId, out var nomeLogin))
-                        {
-                            nomesDosTecnicos.Add(nomeLogin);
-                        }
-                    }
-
-                    if (nomesDosTecnicos.Any())
-                    {
-                        chamado.TecnicoAtribuido = string.Join(", ", nomesDosTecnicos.Distinct());
-                    }
-                }
-            }
-
-            // 3. Busca as Soluções e armazena em um dicionário para uso posterior
-            _log.Info("API", "Buscando as soluções dos chamados...");
+            // 3. Busca APENAS as últimas 500 soluções
             var solucoesPorTicketId = new Dictionary<int, string>();
-            // Aumenta o range para garantir que mais soluções sejam buscadas e remove expand_dropdowns
             string endpointSolucoes = $"{urlBase.TrimEnd('/')}/ITILSolution?sort=id&order=DESC&range=0-500";
-            HttpResponseMessage respSolucoes = await client.GetAsync(endpointSolucoes);
-
+            var respSolucoes = await client.GetAsync(endpointSolucoes);
             if (respSolucoes.IsSuccessStatusCode)
             {
-                string jsonSolucoes = await respSolucoes.Content.ReadAsStringAsync();
-                var solucoes = JsonSerializer.Deserialize<List<Solution>>(jsonSolucoes, jsonOptions) ?? new List<Solution>();
-
-                foreach (var solucao in solucoes)
-                {   // Tenta converter ItemsId para int. Se falhar, ignora.
-                    string? itemsIdString = solucao.ItemsId?.ToString();
-                    if (solucao.ItemType == "Ticket" && !string.IsNullOrEmpty(itemsIdString) && int.TryParse(itemsIdString, out int ticketId))
-                    {
-                        // Pega a solução mais recente (a primeira que encontrar, por causa do sort=DESC)
-                        if (!solucoesPorTicketId.ContainsKey(ticketId))
-                        {
-                            solucoesPorTicketId[ticketId] = solucao.Content;
-                        }
-                    }
+                var solucoes = JsonSerializer.Deserialize<List<Solution>>(await respSolucoes.Content.ReadAsStringAsync(), jsonOptions) ?? new List<Solution>();
+                foreach (var s in solucoes)
+                {
+                    if (s.ItemType == "Ticket" && int.TryParse(s.ItemsId?.ToString(), out int tId) && !solucoesPorTicketId.ContainsKey(tId))
+                        solucoesPorTicketId[tId] = s.Content;
                 }
             }
 
-            // 4. Busca os Acompanhamentos (Followups) de técnicos e armazena o mais recente
-            _log.Info("API", "Buscando as últimas interações de técnicos (Followups)...");
+            // 4. Busca APENAS os últimos 500 followups
             var followupsPorTicketId = new Dictionary<int, string>();
-            // Aumenta o range para garantir que mais followups sejam buscados e remove expand_dropdowns
             string endpointFollowups = $"{urlBase.TrimEnd('/')}/ITILFollowup?sort=id&order=DESC&range=0-500";
-            HttpResponseMessage respFollowups = await client.GetAsync(endpointFollowups);
-
+            var respFollowups = await client.GetAsync(endpointFollowups);
             if (respFollowups.IsSuccessStatusCode)
             {
-                string jsonFollowups = await respFollowups.Content.ReadAsStringAsync();
-                var followups = JsonSerializer.Deserialize<List<Followup>>(jsonFollowups, jsonOptions) ?? new List<Followup>();
-
-                foreach (var followup in followups)
-                {   // Tenta converter ItemsId para int. Se falhar, ignora.
-                    string? itemsIdString = followup.ItemsId?.ToString();
-                    if (followup.ItemType == "Ticket" && !string.IsNullOrEmpty(itemsIdString) && int.TryParse(itemsIdString, out int ticketId))
-                    {
-                        // Pega o followup mais recente (o primeiro que encontrar) que seja privado (interação do técnico)
-                        if (followup.IsPrivate == 1 && !followupsPorTicketId.ContainsKey(ticketId))
-                        {
-                            followupsPorTicketId[ticketId] = followup.Content;
-                        }
-                    }
+                var followups = JsonSerializer.Deserialize<List<Followup>>(await respFollowups.Content.ReadAsStringAsync(), jsonOptions) ?? new List<Followup>();
+                foreach (var f in followups)
+                {
+                    if (f.ItemType == "Ticket" && f.IsPrivate == 1 && int.TryParse(f.ItemsId?.ToString(), out int tId) && !followupsPorTicketId.ContainsKey(tId))
+                        followupsPorTicketId[tId] = f.Content;
                 }
             }
 
+            // 5. Cruza os dados rapidamente na memória
             foreach (var chamado in chamados)
             {
+                var tecnicos = atores.Where(a => a.TicketsId == chamado.Id && a.Type == 2)
+                                     .Select(t => !string.IsNullOrEmpty(t.UsersId) && userMap.ContainsKey(t.UsersId) ? userMap[t.UsersId] : null)
+                                     .Where(n => n != null).Distinct();
+
+                if (tecnicos.Any()) chamado.TecnicoAtribuido = string.Join(", ", tecnicos);
+
                 if ((chamado.Status == 5 || chamado.Status == 6) && solucoesPorTicketId.TryGetValue(chamado.Id, out var solucao))
-                {
                     chamado.Descricao = solucao;
-                }
                 else if ((chamado.Status >= 2 && chamado.Status <= 4) && followupsPorTicketId.TryGetValue(chamado.Id, out var followup))
-                {
                     chamado.Descricao = followup;
-                }
             }
 
-            _log.Sucesso("API", "Chamados, técnicos e conteúdos sincronizados com sucesso!");
+            _log.Sucesso("API_DIARIO", "Carregamento inicial rápido concluído!");
             return chamados;
         }
         catch (Exception ex)
         {
-            _log.Erro("API", $"Exceção Crítica: {ex.Message}");
+            _log.Erro("API_DIARIO", $"Erro no carregamento rápido: {ex.Message}");
             return new List<Chamado>();
         }
     }
 
     private async Task<Dictionary<string, string>> GetUserMapAsync(HttpClient client, string urlBase, JsonSerializerOptions options)
     {
-        _log.Info("API", "Mapeando IDs de usuários para nomes de login...");
         var userMap = new Dictionary<string, string>();
         string endpointUsuarios = $"{urlBase.TrimEnd('/')}/User?range=0-2000";
 
@@ -172,25 +106,13 @@ public class ChamadoService : IChamadoService
             {
                 var json = await response.Content.ReadAsStringAsync();
                 var users = JsonSerializer.Deserialize<List<GlpiUser>>(json, options);
-
                 if (users != null)
                 {
-                    foreach (var user in users)
-                    {
-                        userMap[user.Id.ToString()] = user.Name;
-                    }
-                    _log.Info("API", $"{userMap.Count} usuários mapeados com sucesso.");
+                    foreach (var user in users) userMap[user.Id.ToString()] = user.Name;
                 }
             }
-            else
-            {
-                _log.Erro("API", $"Falha ao buscar lista de usuários: {response.StatusCode}");
-            }
         }
-        catch (Exception ex)
-        {
-            _log.Erro("API", $"Exceção ao mapear usuários: {ex.Message}");
-        }
+        catch { /* Log omitido para limpeza, mantém a execução */ }
 
         return userMap;
     }
@@ -198,14 +120,10 @@ public class ChamadoService : IChamadoService
     private static List<TicketUser> ParseTicketUsers(string json)
     {
         var resultado = new List<TicketUser>();
-
         try
         {
             using var document = JsonDocument.Parse(json);
-            if (document.RootElement.ValueKind != JsonValueKind.Array)
-            {
-                return resultado;
-            }
+            if (document.RootElement.ValueKind != JsonValueKind.Array) return resultado;
 
             foreach (var item in document.RootElement.EnumerateArray())
             {
@@ -214,144 +132,146 @@ public class ChamadoService : IChamadoService
                 if (item.TryGetProperty("type", out var typeProp))
                 {
                     if (typeProp.ValueKind == JsonValueKind.Number && typeProp.TryGetInt32(out int type))
-                    {
                         ticketUser.Type = type;
-                    }
                     else if (typeProp.ValueKind == JsonValueKind.String && int.TryParse(typeProp.GetString(), out int typeString))
-                    {
                         ticketUser.Type = typeString;
-                    }
                 }
 
                 if (item.TryGetProperty("users_id", out var usersIdProp))
-                {
-                    ticketUser.UsersId = usersIdProp.ValueKind == JsonValueKind.String
-                        ? usersIdProp.GetString()
-                        : usersIdProp.ToString();
-                }
+                    ticketUser.UsersId = usersIdProp.ValueKind == JsonValueKind.String ? usersIdProp.GetString() : usersIdProp.ToString();
 
                 if (item.TryGetProperty("tickets_id", out var ticketsIdProp))
-                {
                     ticketUser.TicketsId = ParseNullableInt(ticketsIdProp);
-                }
 
                 resultado.Add(ticketUser);
             }
         }
-        catch (JsonException)
-        {
-            return new List<TicketUser>();
-        }
+        catch (JsonException) { }
 
         return resultado;
     }
 
-    private static int? ParseNullableInt(JsonElement element)
+    private static int? ParseNullableInt(JsonElement element) => element.ValueKind switch
     {
-        return element.ValueKind switch
-        {
-            JsonValueKind.Number when element.TryGetInt32(out int value) => value,
-            JsonValueKind.String when int.TryParse(element.GetString(), out int value) => value,
-            JsonValueKind.Null => null,
-            _ => null
-        };
-    }
+        JsonValueKind.Number when element.TryGetInt32(out int value) => value,
+        JsonValueKind.String when int.TryParse(element.GetString(), out int value) => value,
+        _ => null
+    };
 
     public async Task<List<Chamado>> ObterChamadosParaRelatorioGeralAsync(string urlBase, string appToken, string sessionToken, DateTimeOffset startDate, DateTimeOffset endDate)
     {
-        _log.Info("API_GERAL", "Iniciando busca de dados do GLPI com paginação...");
+        _log.Info("API_GERAL", "Buscando chamados (Geral) com filtro de data e paginação...");
 
-        using var client = new HttpClient();
-        client.DefaultRequestHeaders.Add("App-Token", appToken);
-        client.DefaultRequestHeaders.Add("Session-Token", sessionToken);
+        using var client = CriarHttpClient(appToken, sessionToken);
+        var jsonOptions = CriarJsonOptions();
 
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-            NumberHandling = JsonNumberHandling.AllowReadingFromString
-        };
+        string ticketUrl = $"{urlBase.TrimEnd('/')}/Ticket?expand_dropdowns=true&sort=id&order=ASC";
 
-        // Constrói a URL base para a busca de tickets
-        string ticketBaseUrl = $"{urlBase.TrimEnd('/')}/Ticket?expand_dropdowns=true&sort=id&order=ASC";
-
-        // Adiciona o critério de data se um período válido for fornecido
+        // Aplica o filtro de data de criação (field=2)
         if (startDate != default && endDate != default)
         {
-            _log.Info("API_GERAL", $"Aplicando filtro de data na API: de {startDate:g} a {endDate:g}");
-            var startDateString = startDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
-            var endDateString = endDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
-            ticketBaseUrl += $"&criteria[0][field]=2" + // 2 = date (data de criação)
-                             $"&criteria[0][searchtype]=morethan" +
-                             $"&criteria[0][value]={startDateString}" +
-                             $"&criteria[1][field]=2" +
-                             $"&criteria[1][searchtype]=lessthan" +
-                             $"&criteria[1][value]={endDateString}" +
-                             $"&search_op=AND";
-        }
-        else
-        {
-            _log.Info("API_GERAL", "Buscando TODOS os chamados (sem filtro de data na API).");
+            var start = startDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            var end = endDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            ticketUrl += $"&criteria[0][field]=2&criteria[0][searchtype]=morethan&criteria[0][value]={start}" +
+                         $"&criteria[1][field]=2&criteria[1][searchtype]=lessthan&criteria[1][value]={end}" +
+                         $"&search_op=AND";
         }
 
-        // 1. Busca todos os dados necessários com paginação
-        var userMap = await GetUserMapAsync(client, urlBase, jsonOptions);
-        var chamados = await FetchAllPaginatedAsync<Chamado>(client, ticketBaseUrl, jsonOptions);
-        var atores = await FetchAllTicketUsersPaginatedAsync(client, $"{urlBase.TrimEnd('/')}/Ticket_User?sort=id&order=ASC", jsonOptions);
-        var solucoes = await FetchAllPaginatedAsync<Solution>(client, $"{urlBase.TrimEnd('/')}/ITILSolution?sort=id&order=ASC", jsonOptions);
-        var followups = await FetchAllPaginatedAsync<Followup>(client, $"{urlBase.TrimEnd('/')}/ITILFollowup?sort=id&order=ASC", jsonOptions);
-
-        _log.Info("API_GERAL", $"Total de {chamados.Count} chamados, {atores.Count} atores, {solucoes.Count} soluções, {followups.Count} followups encontrados.");
-
-        // 2. Enriquece os dados (mesma lógica do ObterChamadosAsync, mas com o dataset completo)
-        var solucoesPorTicketId = solucoes
-            .Where(s => s.ItemType == "Ticket" && int.TryParse(s.ItemsId?.ToString(), out _))
-            .GroupBy(s => int.Parse(s.ItemsId!.ToString()!))
-            .ToDictionary(g => g.Key, g => g.First().Content);
-
-        var followupsPorTicketId = followups
-            .Where(f => f.ItemType == "Ticket" && f.IsPrivate == 1 && int.TryParse(f.ItemsId?.ToString(), out _))
-            .GroupBy(f => int.Parse(f.ItemsId!.ToString()!))
-            .ToDictionary(g => g.Key, g => g.First().Content);
-
-        foreach (var chamado in chamados)
-        {
-            // Atribui técnico
-            var tecnicosAtribuidos = atores.Where(a => a.TicketsId.HasValue && a.TicketsId.Value == chamado.Id && a.Type == 2);
-            var nomesDosTecnicos = tecnicosAtribuidos
-                .Where(t => !string.IsNullOrEmpty(t.UsersId) && userMap.ContainsKey(t.UsersId))
-                .Select(t => userMap[t.UsersId!])
-                .Distinct();
-
-            if (nomesDosTecnicos.Any())
-            {
-                chamado.TecnicoAtribuido = string.Join(", ", nomesDosTecnicos);
-            }
-
-            // Atribui descrição (solução ou followup)
-            if ((chamado.Status == 5 || chamado.Status == 6) && solucoesPorTicketId.TryGetValue(chamado.Id, out var solucao))
-            {
-                chamado.Descricao = solucao;
-            }
-            else if ((chamado.Status >= 2 && chamado.Status <= 4) && followupsPorTicketId.TryGetValue(chamado.Id, out var followup))
-            {
-                chamado.Descricao = followup;
-            }
-        }
-
-        _log.Sucesso("API_GERAL", $"{chamados.Count} chamados totais baixados e enriquecidos do GLPI.");
-        return chamados;
+        return await BuscarEEnriquecerChamadosAsync(client, urlBase, ticketUrl, jsonOptions, "API_GERAL");
     }
+
+    private async Task<List<Chamado>> BuscarEEnriquecerChamadosAsync(HttpClient client, string urlBase, string ticketUrl, JsonSerializerOptions options, string logContext)
+    {
+        try
+        {
+            // 1. Busca usuários e os chamados (paginado)
+            var userMap = await GetUserMapAsync(client, urlBase, options);
+            var chamados = await FetchAllPaginatedAsync<Chamado>(client, ticketUrl, options);
+
+            if (!chamados.Any())
+            {
+                _log.Info(logContext, "Nenhum chamado encontrado para este filtro.");
+                return chamados;
+            }
+
+            _log.Info(logContext, $"Processando e enriquecendo {chamados.Count} chamados...");
+
+            // 2. Busca Atores, Soluções e Followups (paginado)
+            var atores = await FetchAllTicketUsersPaginatedAsync(client, $"{urlBase.TrimEnd('/')}/Ticket_User?sort=id&order=DESC", options);
+            var solucoes = await FetchAllPaginatedAsync<Solution>(client, $"{urlBase.TrimEnd('/')}/ITILSolution?sort=id&order=DESC", options);
+            var followups = await FetchAllPaginatedAsync<Followup>(client, $"{urlBase.TrimEnd('/')}/ITILFollowup?sort=id&order=DESC", options);
+
+            // 3. Organiza Soluções e Followups em Dicionários rápidos
+            var solucoesPorTicketId = solucoes
+                .Where(s => s.ItemType == "Ticket" && int.TryParse(s.ItemsId?.ToString(), out _))
+                .GroupBy(s => int.Parse(s.ItemsId!.ToString()!))
+                .ToDictionary(g => g.Key, g => g.First().Content);
+
+            var followupsPorTicketId = followups
+                .Where(f => f.ItemType == "Ticket" && f.IsPrivate == 1 && int.TryParse(f.ItemsId?.ToString(), out _))
+                .GroupBy(f => int.Parse(f.ItemsId!.ToString()!))
+                .ToDictionary(g => g.Key, g => g.First().Content);
+
+            // 4. Cruza as informações
+            foreach (var chamado in chamados)
+            {
+                // Atribui técnico
+                var tecnicosAtribuidos = atores.Where(a => a.TicketsId.HasValue && a.TicketsId.Value == chamado.Id && a.Type == 2);
+                var nomesDosTecnicos = tecnicosAtribuidos
+                    .Where(t => !string.IsNullOrEmpty(t.UsersId) && userMap.ContainsKey(t.UsersId))
+                    .Select(t => userMap[t.UsersId!])
+                    .Distinct();
+
+                if (nomesDosTecnicos.Any())
+                {
+                    chamado.TecnicoAtribuido = string.Join(", ", nomesDosTecnicos);
+                }
+
+                // Atribui descrição (Solução ou Followup)
+                if ((chamado.Status == 5 || chamado.Status == 6) && solucoesPorTicketId.TryGetValue(chamado.Id, out var solucao))
+                {
+                    chamado.Descricao = solucao;
+                }
+                else if ((chamado.Status >= 2 && chamado.Status <= 4) && followupsPorTicketId.TryGetValue(chamado.Id, out var followup))
+                {
+                    chamado.Descricao = followup;
+                }
+            }
+
+            _log.Sucesso(logContext, "Sincronização e enriquecimento concluídos com sucesso!");
+            return chamados;
+        }
+        catch (Exception ex)
+        {
+            _log.Erro(logContext, $"Exceção Crítica: {ex.Message}");
+            return new List<Chamado>();
+        }
+    }
+
+    private HttpClient CriarHttpClient(string appToken, string sessionToken)
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("App-Token", appToken);
+        client.DefaultRequestHeaders.Add("Session-Token", sessionToken);
+        return client;
+    }
+
+    private JsonSerializerOptions CriarJsonOptions() => new()
+    {
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = JsonNumberHandling.AllowReadingFromString
+    };
 
     private async Task<List<T>> FetchAllPaginatedAsync<T>(HttpClient client, string baseUrl, JsonSerializerOptions options)
     {
         var allItems = new List<T>();
         int rangeStart = 0;
-        const int rangeSize = 500; // Busca de 500 em 500
+        const int rangeSize = 500;
         bool hasMore = true;
 
         while (hasMore)
         {
-            string paginatedUrl = $"{baseUrl}&range={rangeStart}-{rangeStart + rangeSize - 1}";
+            string paginatedUrl = $"{baseUrl}{(baseUrl.Contains("?") ? "&" : "?")}range={rangeStart}-{rangeStart + rangeSize - 1}";
             var response = await client.GetAsync(paginatedUrl);
             if (!response.IsSuccessStatusCode) break;
 
@@ -372,9 +292,10 @@ public class ChamadoService : IChamadoService
         return allItems;
     }
 
+
+
     private async Task<List<TicketUser>> FetchAllTicketUsersPaginatedAsync(HttpClient client, string baseUrl, JsonSerializerOptions options)
     {
-        // A busca de TicketUser é especial por causa do seu parser customizado
         var jsonList = await FetchAllPaginatedAsync<JsonElement>(client, baseUrl, options);
         var jsonArrayString = JsonSerializer.Serialize(jsonList);
         return ParseTicketUsers(jsonArrayString);

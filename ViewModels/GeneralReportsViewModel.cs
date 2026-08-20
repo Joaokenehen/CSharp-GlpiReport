@@ -21,6 +21,7 @@ using Xceed.Document.NET;
 using System.IO;
 using RelatorioGLPIApp.Models;
 using MessageBox.Avalonia.Enums;
+using System.Collections.ObjectModel;
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -1036,6 +1037,19 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
         }
         return totalTime;
     }
+}
+
+public class GrupoDeChamados
+{
+    public string Filial { get; set; }
+
+    public int Quantidade => Chamados?.Count ?? 0;
+
+    public ObservableCollection<Chamado> Chamados { get; set; }
+
+    public ObservableCollection<GrupoDeChamados> ChamadosAgrupados { get; set; } = new();
+
+
 }
 
 public record DepartmentStat(string DepartmentName, int TicketCount);
