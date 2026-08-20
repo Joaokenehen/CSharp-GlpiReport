@@ -11,5 +11,26 @@
         MinWidth="1100" MinHeight="700"
         WindowStartupLocation="CenterScreen">
 
-    <ContentControl Content="{Binding PaginaAtual}" />
+    <Grid RowDefinitions="Auto, *">
+        <!-- LINHA 0: Barra de Atualização (Só aparece se HasUpdate for TRUE) -->
+        <Border Grid.Row="0" Background="#FFC107" Padding="10" IsVisible="{Binding HasUpdate}">
+            <Grid ColumnDefinitions="*, Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding UpdateMessage}"
+                           VerticalAlignment="Center"
+                           Foreground="Black"
+                           FontWeight="SemiBold"/>
+
+                <Button Grid.Column="1"
+                        Content="Baixar Atualização"
+                        Command="{Binding DownloadUpdateCommand}"
+                        Background="#212529"
+                        Foreground="White"
+                        Padding="15,5"
+                        CornerRadius="4"/>
+            </Grid>
+        </Border>
+        <ContentControl Grid.Row="1" Content="{Binding PaginaAtual}" />
+    </Grid>
 </Window>
+

@@ -2,6 +2,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.Generic;
 using RelatorioGLPIApp.Models;
 using RelatorioGLPIApp.Services;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
+using System.Diagnostics;
+using System.IO.Enumeration;
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -9,21 +13,61 @@ public partial class MainWindowViewModel : ViewModelBase
 {
     [ObservableProperty]
     private ViewModelBase _paginaAtual = null!;
-
-    // Cache para os ViewModels principais para manter o estado durante a navegação.
     private DashboardViewModel? _dashboardViewModel;
     private GeneralReportsViewModel? _generalReportsViewModel;
     private TechnicianReportsViewModel? _technicianReportsViewModel;
     private readonly ILogService _log;
-    // Não precisa de cache para a tela de detalhe, ela será sempre recriada.
+    private readonly IUpdateService _updateService;
 
-    public MainWindowViewModel()
+    [ObservableProperty]
+    private bool _hasUpdate;
+
+    [ObservableProperty]
+    private string _updateMessage;
+
+    [ObservableProperty]
+    private string _updateUrl = string.Empty;
+
+
+    public MainWindowViewModel(IUpdateService updateService)
     {
-        // Adiciona um logger para depurar a navegação
+        _updateService = updateService;
         _log = new LogService();
-        _log.Info("App", "MainWindowViewModel inicializado.");
+        _log.Info("App", "MainWindowsViewModel inicializado.");
+
+        _ = CheckUpdateOnStartupAsync();
         ShowLoginView();
     }
+
+    private async Task CheckUpdateOnStartupAsync()
+    {
+        var updateInfo = await _updateService.CheckForUpdateAsync();
+
+        if (updateInfo != null)
+        {
+            UpdateMessage = $"Nova versão disponível: {updateInfo.Version}";
+            UpdateUrl = updateInfo.Url;
+            HasUpdate = true;
+        }
+        else
+        {
+            UpdateMessage = "Nenhuma atualização disponível";
+            HasUpdate = false;
+        }
+    }
+
+    public void DownloadUpdateCommand()
+    {
+        if (!string.IsNullOrEmpty(UpdateUrl))
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = UpdateUrl,
+                UseShellExecute = true
+            });
+        }
+    }
+
 
     private void ShowLoginView()
     {
@@ -132,4 +176,5 @@ public partial class MainWindowViewModel : ViewModelBase
         };
         PaginaAtual = detailViewModel;
     }
+
 }

@@ -10,8 +10,7 @@ namespace RelatorioGLPIApp.Services
     public class UpdateService : IUpdateService
     {
         private readonly ILogService _log;
-        // IMPORTANTE: Altere para o seu usuário e nome de repositório no GitHub
-        private const string GitHubRepo = "SEU_USUARIO/SEU_REPOSITORIO";
+        private const string GitHubRepo = "Joaokenehen/CSharp-GlpiReport";
         private readonly HttpClient _httpClient;
 
         public UpdateService(ILogService log)
