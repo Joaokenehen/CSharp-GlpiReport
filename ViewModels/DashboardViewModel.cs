@@ -37,6 +37,7 @@ public partial class DashboardViewModel : ViewModelBase
 
     private readonly ILogService _log;
     private List<Chamado> _todosOsChamados;
+    private readonly bool _isOfflineMode;
 
     [ObservableProperty]
     private ObservableCollection<RelatorioItem> _relatorios;
@@ -101,6 +102,7 @@ public partial class DashboardViewModel : ViewModelBase
         _generalReportStateService = new GeneralReportStateService();
         _technicianReportStateService = new TechnicianReportStateService();
         _todosOsChamados = connectionInfo.InitialChamados;
+        _isOfflineMode = connectionInfo.IsOffline;
 
         Relatorios = new ObservableCollection<RelatorioItem>();
 
@@ -108,6 +110,7 @@ public partial class DashboardViewModel : ViewModelBase
 
         _ = RefreshAllSavedReports();
     }
+
 
     private void AplicarFiltrosNaLista()
     {
@@ -350,6 +353,13 @@ public partial class DashboardViewModel : ViewModelBase
     [RelayCommand] // Este comando agora busca os dados mais recentes e aplica os filtros.
     private async Task BuscarChamados()
     {
+
+        if (_isOfflineMode)
+        {
+            await ShowNotificationAsync("Você está no modo offline. Use botões manuais");
+            return;
+        }
+
         IsSearching = true;
         BuscarChamadosButtonText = "Buscando...";
         try

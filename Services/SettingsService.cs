@@ -9,6 +9,8 @@ namespace RelatorioGLPIApp.Services
     {
         private readonly string _filePath;
 
+        public bool IsOfflineMode { get; set; } = false;
+
         public SettingsService()
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
