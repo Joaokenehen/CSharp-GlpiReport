@@ -39,8 +39,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
     private readonly GlpiConnectionInfo _connectionInfo;
     private readonly IChamadoService _chamadoService;
     private readonly IGeneralReportStateService _generalReportStateService;
-
-    // Propriedade para acessar os comandos do Dashboard (Sair, Relatórios Salvos)
+    private readonly bool _isOfflineMode;
     public DashboardViewModel DashboardContext { get; }
 
     [ObservableProperty]
@@ -53,9 +52,8 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
     private bool _isGenerating;
 
     [ObservableProperty]
-    private string _generationStatus = "Pronto para gerar relatório.";
+    private string _generationStatus = "";
 
-    // Propriedades para as estatísticas (ainda não calculadas)
     [ObservableProperty]
     private int _totalTicketsFound;
     [ObservableProperty]
@@ -129,6 +127,9 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
     [ObservableProperty]
     private bool _isSortAscending = false;
 
+    [ObservableProperty]
+    private ObservableCollection<GrupoDeChamados> _chamadosAgrupados = new();
+
     public Action<string, List<Chamado>, bool>? OnShowTechnicianDetailRequested { get; set; }
     public Action? OnBackToDashboardRequested { get; set; }
     public Action? OnNavigateToTechnicianReportsRequested { get; set; }
@@ -139,13 +140,22 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
         DashboardContext = dashboardContext;
         _connectionInfo = connectionInfo;
         _chamadoService = connectionInfo.ChamadoService;
-        _generalReportStateService = new GeneralReportStateService();
+        _generalReportStateService = new GeneralReportStateService(connectionInfo.IsOffline);
+        _isOfflineMode = connectionInfo.IsOffline;
 
     }
+
 
     [RelayCommand]
     private async Task GenerateReport()
     {
+
+        if (_isOfflineMode)
+        {
+            GenerationStatus = "Você está no modo offline. Conecte-se ao GLPI para gerar relatórios.";
+            return;
+        }
+
         _log.Info("RelatorioGeral", "Iniciando geração de relatório para o dia de hoje.");
         IsGenerating = true;
         GenerationStatus = "Buscando chamados no GLPI...";
@@ -190,6 +200,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
             if (allTickets.Any())
             {
                 _currentReportTickets = ProcessTickets(allTickets, true);
+                AgruparChamadosParaUI();
                 GenerationStatus = $"Relatório gerado com sucesso. {TotalTicketsFound} chamados encontrados no período.";
             }
             else
@@ -495,9 +506,49 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
         return ticketsToProcess;
     }
 
+    private void AgruparChamadosParaUI()
+    {
+        ChamadosAgrupados.Clear();
+
+        if (_currentReportTickets == null || !_currentReportTickets.Any()) return;
+
+        // Agrupa os chamados pegando a última parte do nome do setor
+        // Ex: "Matriz > TI > Suporte" vira apenas "Suporte" para não poluir a tela
+        var agrupamento = _currentReportTickets
+            .GroupBy(t =>
+            {
+                string entidadeCompleta = WebUtility.HtmlDecode(t.Entidade ?? "Matriz").Trim();
+                string setor = entidadeCompleta.Split('>').Last().Trim();
+
+                // Aplica a mesma regra de negócio que você já tem para renomear "Setor"
+                if (setor.Equals("Setor", StringComparison.OrdinalIgnoreCase))
+                    return "Arrecadação";
+
+                return setor;
+            })
+            .Select(grupo => new GrupoDeChamados
+            {
+                Filial = grupo.Key,
+                Chamados = new ObservableCollection<Chamado>(grupo.ToList())
+            })
+            .OrderBy(g => g.Filial); // Ordena de A a Z
+
+        foreach (var grupo in agrupamento)
+        {
+            ChamadosAgrupados.Add(grupo);
+        }
+    }
+
     [RelayCommand]
     private async Task GenerateFullReport()
     {
+
+        if (_isOfflineMode)
+        {
+            GenerationStatus = "Você está no modo offline. Conecte-se ao GLPI para gerar o relatório completo.";
+            return;
+        }
+
         _log.Info("RelatorioGeral", "Iniciando geração de relatório COMPLETO.");
         IsGenerating = true;
         GenerationStatus = "Buscando todos os chamados no GLPI (pode levar um tempo)...";
@@ -534,6 +585,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
             GenerationStatus = $"Processando todos os {allTickets.Count} chamados...";
             await Task.Delay(100);
             _currentReportTickets = ProcessTickets(allTickets, false);
+            AgruparChamadosParaUI();
             GenerationStatus = $"Relatório completo gerado com sucesso. {TotalTicketsFound} chamados encontrados.";
         }
         catch (Exception ex)
@@ -1045,9 +1097,6 @@ public class GrupoDeChamados
     public int Quantidade => Chamados?.Count ?? 0;
 
     public ObservableCollection<Chamado> Chamados { get; set; }
-
-    public ObservableCollection<GrupoDeChamados> ChamadosAgrupados { get; set; } = new();
-
 
 }
 

@@ -56,6 +56,7 @@ public partial class LoginViewModel : ViewModelBase
         LoadSavedCredentials();
     }
 
+
     private void LoadSavedCredentials()
     {
         var credentials = _settingsService.LoadCredentials();
@@ -66,6 +67,24 @@ public partial class LoginViewModel : ViewModelBase
             AppToken = credentials.AppToken;
             IsRememberMe = true;
         }
+    }
+
+    [RelayCommand]
+    private void EntrarOffline()
+    {
+
+        Mensagem = "Iniciando em Modo Offline...";
+
+        var conexaoOffline = new GlpiConnectionInfo(
+            "Modo Offline",                   // urlBase
+            "",                               // appToken
+            "",                               // sessionToken
+            _chamadoService,                  // injeta o serviço normalmente
+            new List<Chamado>(),
+            isOffline: true
+        );
+
+        AoLogarComSucesso?.Invoke(conexaoOffline);
     }
 
     [RelayCommand]

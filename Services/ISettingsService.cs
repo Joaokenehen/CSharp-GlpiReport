@@ -1,3 +1,4 @@
+using System.Dynamic;
 using RelatorioGLPIApp.Models;
 
 namespace RelatorioGLPIApp.Services
@@ -7,5 +8,6 @@ namespace RelatorioGLPIApp.Services
         void SaveCredentials(LoginCredentials credentials);
         LoginCredentials? LoadCredentials();
         void ClearCredentials();
+        bool IsOfflineMode { get; set; }
     }
 }

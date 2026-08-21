@@ -37,6 +37,7 @@ public partial class DashboardViewModel : ViewModelBase
 
     private readonly ILogService _log;
     private List<Chamado> _todosOsChamados;
+    private readonly bool _isOfflineMode;
 
     [ObservableProperty]
     private ObservableCollection<RelatorioItem> _relatorios;
@@ -97,10 +98,11 @@ public partial class DashboardViewModel : ViewModelBase
         _appToken = connectionInfo.AppToken;
         _sessionToken = connectionInfo.SessionToken;
         _chamadoService = connectionInfo.ChamadoService;
-        _reportStateService = new ReportStateService();
-        _generalReportStateService = new GeneralReportStateService();
-        _technicianReportStateService = new TechnicianReportStateService();
         _todosOsChamados = connectionInfo.InitialChamados;
+        _isOfflineMode = connectionInfo.IsOffline;
+        _reportStateService = new ReportStateService(connectionInfo.IsOffline);
+        _generalReportStateService = new GeneralReportStateService(connectionInfo.IsOffline);
+        _technicianReportStateService = new TechnicianReportStateService(connectionInfo.IsOffline);
 
         Relatorios = new ObservableCollection<RelatorioItem>();
 
@@ -108,6 +110,7 @@ public partial class DashboardViewModel : ViewModelBase
 
         _ = RefreshAllSavedReports();
     }
+
 
     private void AplicarFiltrosNaLista()
     {
@@ -350,6 +353,13 @@ public partial class DashboardViewModel : ViewModelBase
     [RelayCommand] // Este comando agora busca os dados mais recentes e aplica os filtros.
     private async Task BuscarChamados()
     {
+
+        if (_isOfflineMode)
+        {
+            await ShowNotificationAsync("Você está no modo offline. Use botões manuais");
+            return;
+        }
+
         IsSearching = true;
         BuscarChamadosButtonText = "Buscando...";
         try
@@ -375,8 +385,8 @@ public partial class DashboardViewModel : ViewModelBase
         var novoItem = new RelatorioItem
         {
             Categoria = categoria,
-            Titulo = "~Nova Atividade~",
-            Descricao = "Descreva o que foi feito aqui...",
+            Titulo = "",
+            Descricao = "",
             IsOrigemGlpi = false,
             StatusTag = "Manual",
             CorStatus = "#6F42C1" // Roxo para os manuais

@@ -20,6 +20,7 @@ using QuestPDF.Fluent;
 using Xceed.Document.NET;
 using Xceed.Words.NET;
 using MessageBox.Avalonia.Enums;
+using Tmds.DBus.Protocol;
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -29,12 +30,13 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
     private readonly GlpiConnectionInfo _connectionInfo;
     private readonly IChamadoService _chamadoService;
     private readonly ITechnicianReportStateService _technicianReportStateService;
+    private readonly bool _isOfflineMode;
 
     [ObservableProperty]
     private bool _isGenerating;
 
     [ObservableProperty]
-    private string _generationStatus = "Pronto para gerar relatório.";
+    private string _generationStatus = "";
 
     [ObservableProperty]
     private ObservableCollection<TechnicianStat> _technicianStats = new();
@@ -65,14 +67,22 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
         _log = logService;
         _connectionInfo = connectionInfo;
         _chamadoService = connectionInfo.ChamadoService;
-        _technicianReportStateService = new TechnicianReportStateService();
+        _technicianReportStateService = new TechnicianReportStateService(connectionInfo.IsOffline);
         DashboardContext = dashboardContext;
+        _isOfflineMode = connectionInfo.IsOffline;
 
     }
 
     [RelayCommand]
     private async Task GenerateReport()
     {
+
+        if (_isOfflineMode)
+        {
+            GenerationStatus = "Você está no modo offline. Conecte-se ao GLPI para gerar relatórios de técnicos.";
+            return;
+        }
+
         _log.Info("RelatorioTecnicos", "Iniciando geração de relatório do dia para técnicos.");
         IsGenerating = true;
         GenerationStatus = "Buscando chamados no GLPI...";
@@ -109,6 +119,13 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
     [RelayCommand]
     private async Task GenerateFullReport()
     {
+
+        if (_isOfflineMode)
+        {
+            GenerationStatus = "Você está no modo offline. Conecte-se ao GLPI para gerar o relatório completo.";
+            return;
+        }
+
         _log.Info("RelatorioTecnicos", "Iniciando geração de relatório COMPLETO para técnicos.");
         IsGenerating = true;
         GenerationStatus = "Buscando todos os chamados no GLPI (pode levar um tempo)...";
@@ -135,8 +152,6 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
         }
     }
 
-    // Este método é uma cópia adaptada do GeneralReportsViewModel.ProcessTickets
-    // para garantir que a lógica de cálculo dos técnicos seja idêntica.
     private List<Chamado> ProcessTechnicianTickets(List<Chamado> allTickets, bool filterForToday)
     {
         _log.Info("RelatorioTecnicos", $"Iniciando processamento. Filtro de hoje: {filterForToday}. Total de chamados: {allTickets.Count}.");
