@@ -21,7 +21,6 @@ using Xceed.Document.NET;
 using System.IO;
 using RelatorioGLPIApp.Models;
 using MessageBox.Avalonia.Enums;
-using System.Collections.ObjectModel;
 
 namespace RelatorioGLPIApp.ViewModels;
 
