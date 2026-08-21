@@ -11,13 +11,18 @@ namespace RelatorioGLPIApp.Services
     public class ReportStateService : IReportStateService
     {
         private readonly string _reportsPath;
-
-        public ReportStateService()
+        public ReportStateService(bool isOffline = false)
         {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var appFolder = Path.Combine(appDataPath, "RelatorioGLPIApp");
-            _reportsPath = Path.Combine(appFolder, "SavedReports");
-            Directory.CreateDirectory(_reportsPath);
+
+            var baseFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RelatorioGLPIApp");
+            var environmentFolder = isOffline ? "Offline" : "Online";
+
+            _reportsPath = Path.Combine(baseFolder, environmentFolder, "SavedReports");
+
+            if (!Directory.Exists(_reportsPath))
+            {
+                Directory.CreateDirectory(_reportsPath);
+            }
         }
 
         public async Task SaveState(SavedReportState state, string finalFileName)

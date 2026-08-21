@@ -98,11 +98,11 @@ public partial class DashboardViewModel : ViewModelBase
         _appToken = connectionInfo.AppToken;
         _sessionToken = connectionInfo.SessionToken;
         _chamadoService = connectionInfo.ChamadoService;
-        _reportStateService = new ReportStateService();
-        _generalReportStateService = new GeneralReportStateService();
-        _technicianReportStateService = new TechnicianReportStateService();
         _todosOsChamados = connectionInfo.InitialChamados;
         _isOfflineMode = connectionInfo.IsOffline;
+        _reportStateService = new ReportStateService(connectionInfo.IsOffline);
+        _generalReportStateService = new GeneralReportStateService(connectionInfo.IsOffline);
+        _technicianReportStateService = new TechnicianReportStateService(connectionInfo.IsOffline);
 
         Relatorios = new ObservableCollection<RelatorioItem>();
 

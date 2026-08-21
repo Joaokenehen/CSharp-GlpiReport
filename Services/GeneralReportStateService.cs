@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using RelatorioGLPIApp.Models;
@@ -11,14 +12,15 @@ namespace RelatorioGLPIApp.Services;
 public class GeneralReportStateService : IGeneralReportStateService
 {
     private readonly string _reportsPath;
-
-    public GeneralReportStateService()
+    public GeneralReportStateService(bool isOffline = false)
     {
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var appFolder = Path.Combine(appDataPath, "RelatorioGLPIApp");
-        // Salva em uma subpasta separada
-        _reportsPath = Path.Combine(appFolder, "SavedGeneralReports");
-        Directory.CreateDirectory(_reportsPath);
+        var baseFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RelatorioGLPIApp");
+        var environmentFolder = isOffline ? "Offline" : "Online";
+        _reportsPath = Path.Combine(baseFolder, environmentFolder, "SavedGeneralReports");
+        if (!Directory.Exists(_reportsPath))
+        {
+            Directory.CreateDirectory(_reportsPath);
+        }
     }
 
     public async Task SaveState(SavedGeneralReportState state, string reportName)

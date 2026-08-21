@@ -40,8 +40,6 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
     private readonly IChamadoService _chamadoService;
     private readonly IGeneralReportStateService _generalReportStateService;
     private readonly bool _isOfflineMode;
-
-    // Propriedade para acessar os comandos do Dashboard (Sair, Relatórios Salvos)
     public DashboardViewModel DashboardContext { get; }
 
     [ObservableProperty]
@@ -56,7 +54,6 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
     [ObservableProperty]
     private string _generationStatus = "";
 
-    // Propriedades para as estatísticas (ainda não calculadas)
     [ObservableProperty]
     private int _totalTicketsFound;
     [ObservableProperty]
@@ -143,7 +140,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
         DashboardContext = dashboardContext;
         _connectionInfo = connectionInfo;
         _chamadoService = connectionInfo.ChamadoService;
-        _generalReportStateService = new GeneralReportStateService();
+        _generalReportStateService = new GeneralReportStateService(connectionInfo.IsOffline);
         _isOfflineMode = connectionInfo.IsOffline;
 
     }

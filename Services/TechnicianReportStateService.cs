@@ -12,12 +12,17 @@ namespace RelatorioGLPIApp.Services
     {
         private readonly string _reportsDirectory;
 
-        public TechnicianReportStateService()
+        public TechnicianReportStateService(bool isOffline = false)
         {
-            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string appDirectory = Path.Combine(appDataPath, "RelatorioGLPIApp");
-            _reportsDirectory = Path.Combine(appDirectory, "technician_reports"); // Different folder
-            Directory.CreateDirectory(_reportsDirectory);
+            var baseFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RelatorioGLPIApp");
+            var environmentFolder = isOffline ? "Offline" : "Online";
+            _reportsDirectory = Path.Combine(baseFolder, environmentFolder, "technician_reports");
+
+            if (!Directory.Exists(_reportsDirectory))
+            {
+                Directory.CreateDirectory(_reportsDirectory);
+            }
+
         }
 
         public async Task<List<string>> GetSavedReportIds()

@@ -20,6 +20,7 @@ using QuestPDF.Fluent;
 using Xceed.Document.NET;
 using Xceed.Words.NET;
 using MessageBox.Avalonia.Enums;
+using Tmds.DBus.Protocol;
 
 namespace RelatorioGLPIApp.ViewModels;
 
@@ -66,7 +67,7 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
         _log = logService;
         _connectionInfo = connectionInfo;
         _chamadoService = connectionInfo.ChamadoService;
-        _technicianReportStateService = new TechnicianReportStateService();
+        _technicianReportStateService = new TechnicianReportStateService(connectionInfo.IsOffline);
         DashboardContext = dashboardContext;
         _isOfflineMode = connectionInfo.IsOffline;
 
@@ -151,8 +152,6 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
         }
     }
 
-    // Este método é uma cópia adaptada do GeneralReportsViewModel.ProcessTickets
-    // para garantir que a lógica de cálculo dos técnicos seja idêntica.
     private List<Chamado> ProcessTechnicianTickets(List<Chamado> allTickets, bool filterForToday)
     {
         _log.Info("RelatorioTecnicos", $"Iniciando processamento. Filtro de hoje: {filterForToday}. Total de chamados: {allTickets.Count}.");
