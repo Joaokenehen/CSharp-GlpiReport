@@ -172,6 +172,7 @@
                                           Width="20" Height="20" Foreground="#495057"/>
                                 <Button.Flyout>
                                     <Flyout Placement="Bottom">
+
                                         <StackPanel Spacing="10" Margin="10">
                                             <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
                                             <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório Semanal" MinWidth="250"/>
@@ -269,6 +270,7 @@
                                     <!-- Título do Card -->
                                     <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                              Text="{Binding Titulo}"
+                                             Watermark="Digite o título da atividade..."
                                              FontWeight="Bold" FontSize="16" Foreground="#212529"
                                              Margin="0,0,0,10" Background="Transparent" BorderThickness="0,0,0,1"
                                              CornerRadius="0" Padding="0,0,0,5"/>
@@ -276,6 +278,7 @@
                                     <!-- Descrição do Card -->
                                     <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
                                              Text="{Binding Descricao}"
+                                             Watermark="Descreva o que foi feito aqui..."
                                              AcceptsReturn="True" TextWrapping="Wrap"
                                              MinHeight="60" Background="#F8F9FA" BorderBrush="#DEE2E6"
                                              CornerRadius="6" Padding="10"/>

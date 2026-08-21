@@ -385,8 +385,8 @@ public partial class DashboardViewModel : ViewModelBase
         var novoItem = new RelatorioItem
         {
             Categoria = categoria,
-            Titulo = "~Nova Atividade~",
-            Descricao = "Descreva o que foi feito aqui...",
+            Titulo = "",
+            Descricao = "",
             IsOrigemGlpi = false,
             StatusTag = "Manual",
             CorStatus = "#6F42C1" // Roxo para os manuais
