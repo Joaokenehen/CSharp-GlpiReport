@@ -163,100 +163,96 @@
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000">
                     <StackPanel Spacing="15">
                         <TextBlock Text="Relatório Geral" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-                        <Grid ColumnDefinitions="*,Auto" Grid.ColumnSpan="20">
-                            <!-- Ações Secundárias (Salvar e Exportar) -->
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
-                                <!-- Botão Salvar (Apenas Ícone) -->
 
-                                <Button IsEnabled="{Binding !IsGenerating}" Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1" Foreground="#495057" Padding="12,8" CornerRadius="6" FontWeight="SemiBold">
-                                    <TextBlock Text="Exportar"/>
-                                    <Button.Flyout>
-                                        <MenuFlyout>
-                                            <MenuItem Header="Gerar PDF" Command="{Binding ExportarPdfCommand}"/>
-                                            <MenuItem Header="Gerar Word" Command="{Binding ExportarWordCommand}"/>
-                                        </MenuFlyout>
-                                    </Button.Flyout>
-                                </Button>
+                        <!-- Agrupamento Vertical: Datas em cima, Botões embaixo -->
+                        <StackPanel Spacing="15">
 
-                                <Button Classes="ActionButton WindowButton" ToolTip.Tip="Salvar Relatório" IsEnabled="{Binding !IsGenerating}">
-                                    <PathIcon Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" Width="20" Height="20"/>
-                                    <Button.Flyout>
-                                        <Flyout Placement="Bottom">
-                                            <StackPanel Spacing="10" Margin="10">
-                                                <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
-                                                <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório Geral Semanal" MinWidth="250" KeyDown="TextBox_KeyDown"/>
-                                                <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch" Classes="accent"/>
-                                                <Panel IsVisible="{Binding DashboardContext.SavedGeneralReports.Count}">
-                                                    <StackPanel>
-                                                        <Separator Margin="0,10"/>
-                                                        <TextBlock Text="Ou clique em um nome recente para usar:" FontSize="12" Foreground="#6C757D" Margin="0,0,0,5"/>
-                                                        <ScrollViewer MaxHeight="150">
-                                                            <ItemsControl ItemsSource="{Binding DashboardContext.SavedGeneralReports}">
-                                                                <ItemsControl.ItemTemplate>
-                                                                    <DataTemplate>
-                                                                        <Button Command="{Binding #RootControl.DataContext.UseSavedReportNameCommand}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="5,3">
-                                                                            <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" Foreground="#0078D4"/>
-                                                                        </Button>
-                                                                    </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
-                                                        </ScrollViewer>
-                                                    </StackPanel>
-                                                </Panel>
-                                            </StackPanel>
-                                        </Flyout>
-                                    </Button.Flyout>
-                                </Button>
+                            <!-- LINHA DE CIMA: Filtros de Período Customizado -->
+                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                    <TextBlock Text="De:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D"/>
+                                    <DatePicker SelectedDate="{Binding StartDate}" Height="35" CornerRadius="4" VerticalAlignment="Center" Padding="5,0"/>
 
-                                <!-- Botão Exportar (Apenas Texto) -->
+                                    <TextBlock Text="Até:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D"/>
+                                    <DatePicker SelectedDate="{Binding EndDate}" Height="35" CornerRadius="4" VerticalAlignment="Center" Padding="5,0"/>
 
+                                    <Button Command="{Binding GenerateCustomReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#0D6EFD" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold" ToolTip.Tip="Gera o relatório do período selecionado.">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <PathIcon Data="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z" Width="16" Height="16"/>
+                                            <TextBlock Text="Buscar Período" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </WrapPanel>
 
-                                <!-- Botão Imprimir (Apenas Ícone) -->
-                                <Button Classes="ActionButton WindowButton" ToolTip.Tip="Imprimir Relatório" IsEnabled="{Binding !IsGenerating}" Command="{Binding PrintReportCommand}">
-                                    <PathIcon Data="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z" Width="20" Height="20"/>
-                                </Button>
-                            </StackPanel>
+                            <!-- LINHA DE BAIXO: Os 5 botões de Geração e Ação -->
+                            <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
 
-                            <!-- Ação Principal (Gerar Relatório) -->
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
-                                <Button Command="{Binding GenerateReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#0078D4" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold" ToolTip.Tip="Gera o relatório com os dados de hoje.">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <PathIcon Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2v-7h2v7zm4 0h-2v-7h2v7z" Width="16" Height="16"/>
-                                        <TextBlock Text="Relatório do Dia" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button Command="{Binding GenerateFullReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#20c997" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold" ToolTip.Tip="Gera o relatório com TODOS os chamados do GLPI. Pode demorar.">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <PathIcon Data="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" Width="16" Height="16"/>
-                                        <TextBlock Text="Relatório Completo" VerticalAlignment="Center"/>
+                                <!-- Botões Rápidos -->
+                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,20,10">
+                                    <Button Command="{Binding GenerateReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#0078D4" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold" ToolTip.Tip="Gera o relatório com os dados de hoje.">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <PathIcon Data="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2v-7h2v7zm4 0h-2v-7h2v7z" Width="16" Height="16"/>
+                                            <TextBlock Text="Relatório do Dia" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Command="{Binding GenerateFullReportCommand}" IsEnabled="{Binding !IsGenerating}" Background="#20c997" Foreground="White" Padding="12" CornerRadius="5" FontWeight="SemiBold" ToolTip.Tip="Gera o relatório com TODOS os chamados do GLPI. Pode demorar.">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <PathIcon Data="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" Width="16" Height="16"/>
+                                            <TextBlock Text="Relatório Completo" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
 
-                                    </StackPanel>
-                                </Button>
-                                <Border Width="1" Background="#DEE2E6" Margin="10,0" VerticalAlignment="Stretch"/>
+                                <!-- Ações Secundárias -->
+                                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,10">
+                                    <Button IsEnabled="{Binding !IsGenerating}" Background="#F8F9FA" BorderBrush="#DEE2E6" BorderThickness="1" Foreground="#495057" Padding="12,8" CornerRadius="6" FontWeight="SemiBold">
+                                        <TextBlock Text="Exportar"/>
+                                        <Button.Flyout>
+                                            <MenuFlyout>
+                                                <MenuItem Header="Gerar PDF" Command="{Binding ExportarPdfCommand}"/>
+                                                <MenuItem Header="Gerar Word" Command="{Binding ExportarWordCommand}"/>
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                    </Button>
 
-                                <!-- Filtros e Botão de Período -->
-                                <TextBlock Text="De:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D"/>
-                                <DatePicker SelectedDate="{Binding StartDate}" Height="35" CornerRadius="4" VerticalAlignment="Center" Padding="5,0"/>
+                                    <Button Classes="ActionButton WindowButton" ToolTip.Tip="Salvar Relatório" IsEnabled="{Binding !IsGenerating}">
+                                        <PathIcon Data="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" Width="20" Height="20"/>
+                                        <Button.Flyout>
+                                            <Flyout Placement="Bottom">
+                                                <StackPanel Spacing="10" Margin="10">
+                                                    <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
+                                                    <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório Geral Semanal" MinWidth="250" KeyDown="TextBox_KeyDown"/>
+                                                    <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch" Classes="accent"/>
+                                                    <Panel IsVisible="{Binding DashboardContext.SavedGeneralReports.Count}">
+                                                        <StackPanel>
+                                                            <Separator Margin="0,10"/>
+                                                            <TextBlock Text="Ou clique em um nome recente para usar:" FontSize="12" Foreground="#6C757D" Margin="0,0,0,5"/>
+                                                            <ScrollViewer MaxHeight="150">
+                                                                <ItemsControl ItemsSource="{Binding DashboardContext.SavedGeneralReports}">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <Button Command="{Binding #RootControl.DataContext.UseSavedReportNameCommand}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="5,3">
+                                                                                <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" Foreground="#0078D4"/>
+                                                                            </Button>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </ScrollViewer>
+                                                        </StackPanel>
+                                                    </Panel>
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
 
-                                <TextBlock Text="Até:" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#6C757D"/>
-                                <DatePicker SelectedDate="{Binding EndDate}" Height="35" CornerRadius="4" VerticalAlignment="Center" Padding="5,0"/>
+                                    <Button Classes="ActionButton WindowButton" ToolTip.Tip="Imprimir Relatório" IsEnabled="{Binding !IsGenerating}" Command="{Binding PrintReportCommand}">
+                                        <PathIcon Data="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z" Width="20" Height="20"/>
+                                    </Button>
+                                </StackPanel>
 
-                                <Button Command="{Binding GenerateCustomReportCommand}"
-                                        IsEnabled="{Binding !IsGenerating}"
-                                        Background="#0D6EFD"
-                                        Foreground="White"
-                                        Padding="12"
-                                        CornerRadius="5"
-                                        FontWeight="SemiBold"
-                                        ToolTip.Tip="Gera o relatório do período selecionado nos calendários ao lado.">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <PathIcon Data="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"
-                                                  Width="16" Height="16"/>
-                                        <TextBlock Text="Buscar Período" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Grid>
+                            </WrapPanel>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
