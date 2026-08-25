@@ -181,7 +181,7 @@
                                         <Flyout Placement="Bottom">
                                             <StackPanel Spacing="10" Margin="10">
                                                 <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
-                                                <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório de Técnicos Semanal" MinWidth="250"/>
+                                                <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório de Técnicos Semanal" MinWidth="250" KeyDown="TextBox_KeyDown"/>
                                                 <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch" Classes="accent"/>
                                                 <Panel IsVisible="{Binding SavedTechnicianReports.Count}">
                                                     <StackPanel>
