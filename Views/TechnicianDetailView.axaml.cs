@@ -28,4 +28,5 @@ public partial class TechnicianDetailView : UserControl
         var window = this.FindAncestorOfType<Window>();
         if (window != null) window.WindowState = WindowState.Minimized;
     }
+
 }

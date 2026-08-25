@@ -40,6 +40,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
     private readonly IChamadoService _chamadoService;
     private readonly IGeneralReportStateService _generalReportStateService;
     private readonly bool _isOfflineMode;
+    private bool _isDailyReport;
     public DashboardViewModel DashboardContext { get; }
 
     [ObservableProperty]
@@ -219,7 +220,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
         }
     }
 
-    private List<Chamado> ProcessTickets(List<Chamado> allTickets, bool filterForToday)
+    private List<Chamado> ProcessTickets(List<Chamado> allTickets, bool filterForToday, DateTimeOffset? customStartDate = null, DateTimeOffset? customEndDate = null)
     {
         _log.Info("RelatorioGeral", $"Iniciando processamento. Filtro de hoje: {filterForToday}. Total de chamados: {allTickets.Count}.");
 
@@ -227,11 +228,9 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
 
         if (filterForToday)
         {
-            // Define o período do relatório para HOJE.
             var reportStartDate = DateTime.Today;
             var reportEndDate = DateTime.Today.AddDays(1);
 
-            // 1. FILTRAGEM: Seleciona apenas os chamados criados HOJE.
             ticketsToProcess = allTickets.Where(t =>
             {
                 if (DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacao))
@@ -241,6 +240,22 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
                 return false;
             }).ToList();
             _log.Info("RelatorioGeral", $"{ticketsToProcess.Count} chamados encontrados criados hoje.");
+        }
+        else if (customStartDate.HasValue && customEndDate.HasValue)
+        {
+            // AQUI É A MÁGICA: Corta os chamados exatamente no mês que você escolheu na tela!
+            var reportStartDate = customStartDate.Value.Date;
+            var reportEndDate = customEndDate.Value.Date.AddDays(1); // Vai até as 23:59 do último dia
+
+            ticketsToProcess = allTickets.Where(t =>
+            {
+                if (DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacao))
+                {
+                    return dataCriacao >= reportStartDate && dataCriacao < reportEndDate;
+                }
+                return false;
+            }).ToList();
+            _log.Info("RelatorioGeral", $"{ticketsToProcess.Count} chamados encontrados no período de {reportStartDate:dd/MM/yyyy} a {customEndDate.Value.Date:dd/MM/yyyy}.");
         }
         else
         {
@@ -584,7 +599,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
             var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(_connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken, default, default);
             GenerationStatus = $"Processando todos os {allTickets.Count} chamados...";
             await Task.Delay(100);
-            _currentReportTickets = ProcessTickets(allTickets, false);
+            _currentReportTickets = ProcessTickets(allTickets, false, StartDate, EndDate);
             AgruparChamadosParaUI();
             GenerationStatus = $"Relatório completo gerado com sucesso. {TotalTicketsFound} chamados encontrados.";
         }
@@ -592,6 +607,85 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
         {
             _log.Erro("RelatorioGeral", $"Falha ao gerar relatório completo: {ex.Message}");
             GenerationStatus = "Ocorreu um erro ao gerar o relatório completo.";
+        }
+        finally
+        {
+            IsGenerating = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task GenerateCustomReport()
+    {
+        if (_isOfflineMode)
+        {
+            GenerationStatus = "Você está no modo offline. Conecte-se para usar filtros de data.";
+            return;
+        }
+
+        _log.Info("RelatorioGeral", "Iniciando geração de relatório geral por PERÍODO.");
+        IsGenerating = true;
+        GenerationStatus = $"Buscando chamados de {StartDate:dd/MM/yyyy} até {EndDate:dd/MM/yyyy}...";
+
+        TotalTicketsFound = 0;
+        TotalSolved = 0;
+        TotalBusinessHours = 0;
+        TotalOnDuty = 0;
+        TotalPending = 0;
+        TotalNew = 0;
+
+        MatrizStats?.Clear();
+        AgenciasStats?.Clear();
+        FiliaisStats?.Clear();
+        GaragemStats?.Clear();
+        EncomendasStats?.Clear();
+        AgenciasPropriasStats?.Clear();
+        TechnicianStats?.Clear();
+
+        MatrizPercentage = "";
+        AgenciasPercentage = "";
+        FiliaisPercentage = "";
+        GaragemPercentage = "";
+        EncomendasPercentage = "";
+        AgenciasPropriasPercentage = "";
+
+        AverageTicketsPerDay = "N/A";
+        IsAverageVisible = false;
+        AverageSolveTime = "N/A";
+        IsResolutionRateVisible = false;
+        ReportSaveName = "";
+
+        try
+        {
+            var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(
+                _connectionInfo.Url,
+                _connectionInfo.AppToken,
+                _connectionInfo.SessionToken,
+                StartDate,
+                EndDate);
+
+            GenerationStatus = $"Processando {allTickets.Count} chamados do período...";
+            await Task.Delay(100); // Pequena pausa para a UI respirar e mostrar a mensagem
+
+            if (allTickets.Any())
+            {
+                _isDailyReport = false;
+
+                _currentReportTickets = ProcessTickets(allTickets, false, StartDate, EndDate);
+
+                AgruparChamadosParaUI();
+
+                GenerationStatus = $"Relatório do período gerado com sucesso. {TotalTicketsFound} chamados encontrados.";
+            }
+            else
+            {
+                GenerationStatus = "Nenhum chamado encontrado no período selecionado.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Erro("RelatorioGeral", $"Falha ao gerar relatório por período: {ex.Message}");
+            GenerationStatus = "Ocorreu um erro ao gerar o relatório do período.";
         }
         finally
         {

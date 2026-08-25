@@ -5,8 +5,6 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using RelatorioGLPIApp.ViewModels;
 using System;
-using System.Threading.Tasks;
-
 namespace RelatorioGLPIApp.Views;
 
 public partial class DashboardView : UserControl
@@ -51,5 +49,16 @@ public partial class DashboardView : UserControl
     {
         var window = this.FindAncestorOfType<Window>();
         if (window != null) window.WindowState = WindowState.Minimized;
+    }
+
+    private async void TextBox_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Enter)
+        {
+            if (DataContext is DashboardViewModel vm && vm.SaveStateCommand.CanExecute(null))
+            {
+                await vm.SaveStateCommand.ExecuteAsync(null);
+            }
+        }
     }
 }

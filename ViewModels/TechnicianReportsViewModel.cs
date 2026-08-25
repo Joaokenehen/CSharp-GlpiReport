@@ -53,6 +53,12 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
     [ObservableProperty]
     private bool _isSortAscending = false;
 
+    [ObservableProperty]
+    private DateTimeOffset _startDate = new DateTimeOffset(DateTime.Now.Year, DateTime.Now.Month, 1, 0, 0, 0, DateTimeOffset.Now.Offset);
+
+    [ObservableProperty]
+    private DateTimeOffset _endDate = DateTimeOffset.Now;
+
     public DashboardViewModel DashboardContext { get; }
 
     private List<Chamado> _currentReportTickets = new();
@@ -152,7 +158,57 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
         }
     }
 
-    private List<Chamado> ProcessTechnicianTickets(List<Chamado> allTickets, bool filterForToday)
+    [RelayCommand]
+    private async Task GenerateCustomReport()
+    {
+        if (_isOfflineMode)
+        {
+            GenerationStatus = "Você está no modo offline. Conecte-se para usar filtros de data.";
+            return;
+        }
+
+        _log.Info("RelatorioTecnicos", "Iniciando geração de relatório por PERÍODO para técnicos.");
+        IsGenerating = true;
+        GenerationStatus = $"Buscando chamados de {StartDate:dd/MM/yyyy} até {EndDate:dd/MM/yyyy}...";
+        TechnicianStats.Clear();
+
+        try
+        {
+            var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(
+                _connectionInfo.Url,
+                _connectionInfo.AppToken,
+                _connectionInfo.SessionToken,
+                StartDate,
+                EndDate);
+
+            GenerationStatus = $"Processando {allTickets.Count} chamados do período...";
+            await Task.Delay(100);
+
+            if (allTickets.Any())
+            {
+                _isDailyReport = false;
+                _currentReportTickets = ProcessTechnicianTickets(allTickets, false, StartDate, EndDate);
+                GenerationStatus = $"Relatório do período gerado com sucesso. {TechnicianStats.Count} técnicos analisados.";
+            }
+            else
+            {
+                GenerationStatus = "Nenhum chamado encontrado no período selecionado.";
+            }
+
+        }
+        catch (Exception ex)
+        {
+            _log.Erro("RelatorioTecnicos", $"Falha ao gerar relatório por período: {ex.Message}");
+            GenerationStatus = "Ocorreu um erro ao gerar o relatório do período.";
+        }
+        finally
+        {
+            IsGenerating = false;
+        }
+
+    }
+
+    private List<Chamado> ProcessTechnicianTickets(List<Chamado> allTickets, bool filterForToday, DateTimeOffset? customStartDate = null, DateTimeOffset? customEndDate = null)
     {
         _log.Info("RelatorioTecnicos", $"Iniciando processamento. Filtro de hoje: {filterForToday}. Total de chamados: {allTickets.Count}.");
 
@@ -171,6 +227,22 @@ public partial class TechnicianReportsViewModel : ViewModelBase, IOnDutyChecker
                 return false;
             }).ToList();
             _log.Info("RelatorioTecnicos", $"{ticketsToProcess.Count} chamados encontrados criados hoje.");
+        }
+        else if (customStartDate.HasValue && customEndDate.HasValue)
+        {
+            // Filtro local por período para os técnicos
+            var reportStartDate = customStartDate.Value.Date;
+            var reportEndDate = customEndDate.Value.Date.AddDays(1);
+
+            ticketsToProcess = allTickets.Where(t =>
+            {
+                if (DateTime.TryParse(t.DataCriacao, CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var dataCriacao))
+                {
+                    return dataCriacao >= reportStartDate && dataCriacao < reportEndDate;
+                }
+                return false;
+            }).ToList();
+            _log.Info("RelatorioTecnicos", $"{ticketsToProcess.Count} chamados encontrados no período de {reportStartDate:dd/MM/yyyy} a {customEndDate.Value.Date:dd/MM/yyyy}.");
         }
         else
         {

@@ -2,6 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Avalonia.Interactivity;
+using RelatorioGLPIApp.ViewModels;
+
 
 namespace RelatorioGLPIApp.Views;
 
@@ -27,5 +29,16 @@ public partial class TechnicianReportsView : UserControl
     {
         var window = this.FindAncestorOfType<Window>();
         if (window != null) window.WindowState = WindowState.Minimized;
+    }
+
+    private async void TextBox_KeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.Enter)
+        {
+            if (DataContext is TechnicianReportsViewModel vm && vm.SaveStateCommand.CanExecute(null))
+            {
+                await vm.SaveStateCommand.ExecuteAsync(null);
+            }
+        }
     }
 }

@@ -172,9 +172,14 @@ public class ChamadoService : IChamadoService
         {
             var start = startDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
             var end = endDate.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
-            ticketUrl += $"&criteria[0][field]=2&criteria[0][searchtype]=morethan&criteria[0][value]={start}" +
-                         $"&criteria[1][field]=2&criteria[1][searchtype]=lessthan&criteria[1][value]={end}" +
-                         $"&search_op=AND";
+
+            // Codifica a data para formato de URL (transforma espaço em %20)
+            start = Uri.EscapeDataString(start);
+            end = Uri.EscapeDataString(end);
+
+            // Usa o field=15 e amarra o segundo critério usando [link]=AND
+            ticketUrl += $"&criteria[0][field]=15&criteria[0][searchtype]=morethan&criteria[0][value]={start}" +
+                         $"&criteria[1][link]=AND&criteria[1][field]=15&criteria[1][searchtype]=lessthan&criteria[1][value]={end}";
         }
 
         return await BuscarEEnriquecerChamadosAsync(client, urlBase, ticketUrl, jsonOptions, "API_GERAL");
