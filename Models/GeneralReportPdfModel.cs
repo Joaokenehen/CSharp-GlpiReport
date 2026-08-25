@@ -23,7 +23,7 @@ public record GeneralReportPdfModel(
     ICollection<DepartmentStat> AgenciasStats,
     ICollection<DepartmentStat> FiliaisStats,
     ICollection<DepartmentStat> GaragemStats,
-    ICollection<DepartmentStat> EncomendasStats, // This was already correct
-    ICollection<DepartmentStat> AgenciasPropriasStats, // This was already correct
+    ICollection<DepartmentStat> EncomendasStats,
+    ICollection<DepartmentStat> AgenciasPropriasStats,
     ICollection<TechnicianStat> TechnicianStats
 );

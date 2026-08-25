@@ -1,5 +1,5 @@
 #define MyAppName "Gerador de Relatórios GLPI"
-#define MyAppVersion "1.5.4"
+#define MyAppVersion "1.5.6"
 #define MyAppPublisher "João Gustavo"
 #define MyAppExeName "RelatorioGLPIApp.exe"
 
@@ -13,7 +13,7 @@ SetupIconFile=.\Assets\logocsharp.ico
 DisableProgramGroupPage=yes
 CloseApplications=yes
 OutputDir=C:\Users\joaot\Desktop\Projetos\RelatorioGLPIApp\Installer
-OutputBaseFilename=setup-relatorio-glpi-v1.5.4
+OutputBaseFilename=setup-relatorio-glpi-v1.5.6
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -22,12 +22,11 @@ WizardStyle=modern
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}";
 
 [Files]
 Source: "C:\Users\joaot\Desktop\Projetos\RelatorioGLPIApp\bin\Release\net8.0\win-x64\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-[Icons]
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\{#MyAppExeName}"
