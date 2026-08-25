@@ -183,12 +183,12 @@
                                                 <TextBlock Text="Nome do Relatório:" FontWeight="SemiBold"/>
                                                 <TextBox Text="{Binding ReportSaveName}" Watermark="Ex: Relatório de Técnicos Semanal" MinWidth="250" KeyDown="TextBox_KeyDown"/>
                                                 <Button Content="Salvar" Command="{Binding SaveStateCommand}" HorizontalAlignment="Stretch" Classes="accent"/>
-                                                <Panel IsVisible="{Binding SavedTechnicianReports.Count}">
+                                                <Panel IsVisible="{Binding DashboardContext.SavedTechnicianReports.Count}">
                                                     <StackPanel>
                                                         <Separator Margin="0,10"/>
                                                         <TextBlock Text="Ou clique em um nome recente para usar:" FontSize="12" Foreground="#6C757D" Margin="0,0,0,5"/>
                                                         <ScrollViewer MaxHeight="150">
-                                                            <ItemsControl ItemsSource="{Binding SavedTechnicianReports}">
+                                                            <ItemsControl ItemsSource="{Binding DashboardContext.SavedTechnicianReports}">
                                                                 <ItemsControl.ItemTemplate>
                                                                     <DataTemplate>
                                                                         <Button Command="{Binding #RootControl.DataContext.UseSavedReportNameCommand}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="5,3">
