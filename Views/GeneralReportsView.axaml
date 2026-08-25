@@ -7,6 +7,19 @@
              Background="#F3F4F6">
 
     <UserControl.Styles>
+        <Style Selector="ToggleButton.TransparentToggle">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ToggleButton.TransparentToggle:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.TransparentToggle:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ToggleButton.TransparentToggle:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
         <Style Selector="Button.WindowButton">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#495057"/>
@@ -302,12 +315,20 @@
 
                 <!-- Demandas da Matriz -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding MatrizStats.Count}">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
-                            <TextBlock Text="Demandas da Matriz" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding MatrizPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding MatrizStats}">
+                    <StackPanel Spacing="0">
+                        <!-- CABEÇALHO CLICÁVEL -->
+                        <ToggleButton x:Name="MatrizToggle" Classes="TransparentToggle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Cursor="Hand">                            <Grid ColumnDefinitions="*, Auto" Background="Transparent">
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                                <TextBlock Text="Demandas da Matriz" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="#2B3035"/>
+                                <TextBlock Text="{Binding MatrizPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                            </StackPanel>
+                            <PathIcon Grid.Column="1" Data="M7 10l5 5 5-5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding !#MatrizToggle.IsChecked}" Margin="0,0,5,10"/>
+                            <PathIcon Grid.Column="1" Data="M7 14l5-5 5 5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding #MatrizToggle.IsChecked}" Margin="0,0,5,10"/>
+                        </Grid>
+                        </ToggleButton>
+
+                        <!-- CONTEÚDO -->
+                        <ItemsControl ItemsSource="{Binding MatrizStats}" IsVisible="{Binding #MatrizToggle.IsChecked}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DepartmentStat">
                                     <Grid ColumnDefinitions="*, Auto" Margin="0,3">
@@ -324,14 +345,29 @@
 
                 <!-- Demandas das Agências -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding AgenciasStats.Count}">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
-                            <TextBlock Text="Demandas das Agências" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding AgenciasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding AgenciasStats}">
+                    <StackPanel Spacing="0">
+
+                        <!-- CABEÇALHO CLICÁVEL -->
+                        <ToggleButton x:Name="AgenciasToggle" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Cursor="Hand">
+                            <Grid ColumnDefinitions="*, Auto" Background="Transparent">
+                                <!-- Título e Porcentagem -->
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                                    <TextBlock Text="Demandas das Agências" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="#2B3035"/>
+                                    <TextBlock Text="{Binding AgenciasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Setinhas Animadas (Trocam de Acordo com o Clique) -->
+                                <!-- Seta para Baixo (Fechado) -->
+                                <PathIcon Grid.Column="1" Data="M7 10l5 5 5-5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding !#AgenciasToggle.IsChecked}" Margin="0,0,5,10"/>
+                                <!-- Seta para Cima (Aberto) -->
+                                <PathIcon Grid.Column="1" Data="M7 14l5-5 5 5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding #AgenciasToggle.IsChecked}" Margin="0,0,5,10"/>
+                            </Grid>
+                        </ToggleButton>
+
+                        <!-- CONTEÚDO (Mostra apenas quando o botão acima está clicado/marcado) -->
+                        <ItemsControl ItemsSource="{Binding AgenciasStats}" IsVisible="{Binding #AgenciasToggle.IsChecked}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:DepartmentStat">
+                                <DataTemplate DataType="vm:DepartmentStat">
                                     <Grid ColumnDefinitions="*, Auto" Margin="0,3">
                                         <TextBlock Grid.Column="0" Text="{Binding DepartmentName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                         <Border Grid.Column="1" Background="#E9ECEF" CornerRadius="10" Padding="8,2" MinWidth="30">
@@ -341,17 +377,27 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+
                     </StackPanel>
                 </Border>
 
                 <!-- Demandas das Filiais -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding FiliaisStats.Count}">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
-                            <TextBlock Text="Demandas das Filiais" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding FiliaisPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding FiliaisStats}">
+                    <StackPanel Spacing="0">
+                        <!-- CABEÇALHO CLICÁVEL -->
+                        <ToggleButton x:Name="FiliaisToggle" Classes="TransparentToggle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Cursor="Hand">
+                            <Grid ColumnDefinitions="*, Auto" Background="Transparent">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                                    <TextBlock Text="Demandas das Filiais" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="#2B3035"/>
+                                    <TextBlock Text="{Binding FiliaisPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                                </StackPanel>
+                                <PathIcon Grid.Column="1" Data="M7 10l5 5 5-5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding !#FiliaisToggle.IsChecked}" Margin="0,0,5,10"/>
+                                <PathIcon Grid.Column="1" Data="M7 14l5-5 5 5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding #FiliaisToggle.IsChecked}" Margin="0,0,5,10"/>
+                            </Grid>
+                        </ToggleButton>
+
+                        <!-- CONTEÚDO -->
+                        <ItemsControl ItemsSource="{Binding FiliaisStats}" IsVisible="{Binding #FiliaisToggle.IsChecked}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DepartmentStat">
                                     <Grid ColumnDefinitions="*, Auto" Margin="0,3">
@@ -368,12 +414,21 @@
 
                 <!-- Demandas da Garagem -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding GaragemStats.Count}">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
-                            <TextBlock Text="Demandas da Garagem" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding GaragemPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding GaragemStats}">
+                    <StackPanel Spacing="0">
+                        <!-- CABEÇALHO CLICÁVEL -->
+                        <ToggleButton x:Name="GaragemToggle" Classes="TransparentToggle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Cursor="Hand">
+                            <Grid ColumnDefinitions="*, Auto" Background="Transparent">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                                    <TextBlock Text="Demandas da Garagem" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="#2B3035"/>
+                                    <TextBlock Text="{Binding GaragemPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                                </StackPanel>
+                                <PathIcon Grid.Column="1" Data="M7 10l5 5 5-5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding !#GaragemToggle.IsChecked}" Margin="0,0,5,10"/>
+                                <PathIcon Grid.Column="1" Data="M7 14l5-5 5 5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding #GaragemToggle.IsChecked}" Margin="0,0,5,10"/>
+                            </Grid>
+                        </ToggleButton>
+
+                        <!-- CONTEÚDO -->
+                        <ItemsControl ItemsSource="{Binding GaragemStats}" IsVisible="{Binding #GaragemToggle.IsChecked}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DepartmentStat">
                                     <Grid ColumnDefinitions="*, Auto" Margin="0,3">
@@ -390,12 +445,21 @@
 
                 <!-- Demandas de Encomendas -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding EncomendasStats.Count}">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
-                            <TextBlock Text="Demandas de Encomendas" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding EncomendasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding EncomendasStats}">
+                    <StackPanel Spacing="0">
+                        <!-- CABEÇALHO CLICÁVEL -->
+                        <ToggleButton x:Name="EncomendasToggle" Classes="TransparentToggle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Cursor="Hand">
+                            <Grid ColumnDefinitions="*, Auto" Background="Transparent">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                                    <TextBlock Text="Demandas de Encomendas" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="#2B3035"/>
+                                    <TextBlock Text="{Binding EncomendasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                                </StackPanel>
+                                <PathIcon Grid.Column="1" Data="M7 10l5 5 5-5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding !#EncomendasToggle.IsChecked}" Margin="0,0,5,10"/>
+                                <PathIcon Grid.Column="1" Data="M7 14l5-5 5 5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding #EncomendasToggle.IsChecked}" Margin="0,0,5,10"/>
+                            </Grid>
+                        </ToggleButton>
+
+                        <!-- CONTEÚDO -->
+                        <ItemsControl ItemsSource="{Binding EncomendasStats}" IsVisible="{Binding #EncomendasToggle.IsChecked}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DepartmentStat">
                                     <Grid ColumnDefinitions="*, Auto" Margin="0,3">
@@ -412,12 +476,21 @@
 
                 <!-- Demandas de Agências Próprias -->
                 <Border Background="White" Padding="20" CornerRadius="8" BoxShadow="0 2 8 0 #10000000" IsVisible="{Binding AgenciasPropriasStats.Count}">
-                    <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
-                            <TextBlock Text="Demandas de Agências Próprias" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding AgenciasPropriasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding AgenciasPropriasStats}">
+                    <StackPanel Spacing="0">
+                        <!-- CABEÇALHO CLICÁVEL -->
+                        <ToggleButton x:Name="AgenciasPropriasToggle" Classes="TransparentToggle" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="0" Cursor="Hand">
+                            <Grid ColumnDefinitions="*, Auto" Background="Transparent">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,10">
+                                    <TextBlock Text="Demandas de Agências Próprias" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Foreground="#2B3035"/>
+                                    <TextBlock Text="{Binding AgenciasPropriasPercentage}" Foreground="#6C757D" FontSize="14" FontWeight="Normal" VerticalAlignment="Center" ToolTip.Tip="Porcentagem de chamados abertos neste setor em relação ao total de chamados do período."/>
+                                </StackPanel>
+                                <PathIcon Grid.Column="1" Data="M7 10l5 5 5-5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding !#AgenciasPropriasToggle.IsChecked}" Margin="0,0,5,10"/>
+                                <PathIcon Grid.Column="1" Data="M7 14l5-5 5 5z" Width="14" Height="14" Foreground="#6C757D" IsVisible="{Binding #AgenciasPropriasToggle.IsChecked}" Margin="0,0,5,10"/>
+                            </Grid>
+                        </ToggleButton>
+
+                        <!-- CONTEÚDO -->
+                        <ItemsControl ItemsSource="{Binding AgenciasPropriasStats}" IsVisible="{Binding #AgenciasPropriasToggle.IsChecked}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DepartmentStat">
                                     <Grid ColumnDefinitions="*, Auto" Margin="0,3">

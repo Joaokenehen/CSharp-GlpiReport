@@ -599,7 +599,7 @@ public partial class GeneralReportsViewModel : ViewModelBase, IOnDutyChecker
             var allTickets = await _chamadoService.ObterChamadosParaRelatorioGeralAsync(_connectionInfo.Url, _connectionInfo.AppToken, _connectionInfo.SessionToken, default, default);
             GenerationStatus = $"Processando todos os {allTickets.Count} chamados...";
             await Task.Delay(100);
-            _currentReportTickets = ProcessTickets(allTickets, false, StartDate, EndDate);
+            _currentReportTickets = ProcessTickets(allTickets, false);
             AgruparChamadosParaUI();
             GenerationStatus = $"Relatório completo gerado com sucesso. {TotalTicketsFound} chamados encontrados.";
         }
