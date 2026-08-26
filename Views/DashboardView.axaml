@@ -117,7 +117,7 @@
 
                 <!-- LINHA 2: Barra de Ações (Filtros e Botões) -->
                 <Border Grid.Row="1" BorderBrush="#E9ECEF" BorderThickness="0,1,0,0">
-                    <WrapPanel Margin="20,10,10,10" VerticalAlignment="Center">
+                    <WrapPanel Margin="20,10,20,10" VerticalAlignment="Center">
                         <!-- KPIs -->
                         <Border Background="#E9ECEF" CornerRadius="6" Padding="10,5" Margin="0,0,20,5">
                             <StackPanel Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
@@ -233,8 +233,8 @@
         </Border>
 
         <!-- 2. ÁREA DOS CARDS -->
-        <ScrollViewer Grid.Row="1" Padding="30" x:Name="CardsScrollViewer">
-            <StackPanel>
+        <ScrollViewer Grid.Row="1" x:Name="CardsScrollViewer" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="30">
                 <ItemsControl ItemsSource="{Binding Relatorios}" x:Name="RelatoriosItemsControl">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:RelatorioItem">
@@ -245,35 +245,37 @@
                                 <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto">
 
                                     <!-- ÁREA DAS TAGS (Categoria e Status) -->
-                                    <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
-                                        <Border Background="#E9ECEF" CornerRadius="4" Padding="8,4">
+                                    <WrapPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,0,0,12">
+                                        <Border Background="#E9ECEF" CornerRadius="4" Padding="8,4" Margin="0,0,10,0">
                                             <TextBlock Text="{Binding Categoria}" FontSize="12" FontWeight="Bold" Foreground="#495057"/>
                                         </Border>
 
                                         <!-- A NOVA TAG DE STATUS COM COR DINÂMICA -->
-                                        <Border Background="{Binding CorStatus}" CornerRadius="4" Padding="8,4">
+                                        <Border Background="{Binding CorStatus}" CornerRadius="4" Padding="8,4" Margin="0,0,10,0">
                                             <TextBlock Text="{Binding StatusTag}" FontSize="12" FontWeight="Bold" Foreground="White"/>
                                         </Border>
 
-                                        <TextBlock Text="{Binding Tecnico}" FontSize="12" FontWeight="SemiBold" Foreground="#6C757D" VerticalAlignment="Center" Margin="5,0,0,0"/>
-                                    </StackPanel>
+                                        <TextBlock Text="{Binding Tecnico}" FontSize="12" FontWeight="SemiBold" Foreground="#6C757D" VerticalAlignment="Center"/>
+                                    </WrapPanel>
 
-                                    <!-- Botão Lixeira -->
+                                    <!-- Botão Lixeira (Agora alinhado e sem margem negativa) -->
                                     <Button Grid.Row="0" Grid.Column="1"
                                             Command="{Binding #RootControl.DataContext.RemoverItemCommand}"
                                             CommandParameter="{Binding}"
                                             Background="Transparent"
-                                            Padding="5" Cursor="Hand" Margin="0,-5,-5,0">
+                                            Padding="8" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <PathIcon Data="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-                                                  Foreground="#DC3545" Width="16" Height="16"/>
+                                                  Foreground="#DC3545" Width="18" Height="18"/>
                                     </Button>
-                                    <!-- Título do Card -->
+
+                                    <!-- Título do Card (Agora com TextWrapping) -->
                                     <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                              Text="{Binding Titulo}"
                                              Watermark="Digite o título da atividade..."
                                              FontWeight="Bold" FontSize="16" Foreground="#212529"
                                              Margin="0,0,0,10" Background="Transparent" BorderThickness="0,0,0,1"
-                                             CornerRadius="0" Padding="0,0,0,5"/>
+                                             CornerRadius="0" Padding="0,0,0,5"
+                                             TextWrapping="Wrap"/>
 
                                     <!-- Descrição do Card -->
                                     <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
